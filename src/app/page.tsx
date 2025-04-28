@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book type
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, User, Settings, BookMarked, Search, MessageSquare, Users, UserSearch } from "lucide-react"; // Added Users, UserSearch icons
+import { LogOut, User, Settings, BookMarked, Search, MessageSquare, Users, UserSearch, Gift } from "lucide-react"; // Added Gift icon
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -247,6 +247,9 @@ export default function Home() {
 
 
             {/* Action Icons */}
+            <Button variant="ghost" size="icon" onClick={() => navigate('/recommendations')} aria-label="Recommendations">
+                <Gift className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => navigate('/readers-club')} aria-label="Readers Club">
                 <Users className="h-5 w-5" />
             </Button>
@@ -327,5 +330,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
