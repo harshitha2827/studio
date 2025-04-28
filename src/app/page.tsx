@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book type
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, User, Settings, History, BookMarked, Search } from "lucide-react"; // Added Search icon
+import { LogOut, User, Settings, History, BookMarked, Search, MessageSquare } from "lucide-react"; // Added Search and MessageSquare icons
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; //
 import { BookCategorySection } from "@/components/book-category-section"; // Import the new component
 import { generateSampleBooks } from '@/lib/mock-data'; // Import mock data generator
 import { Input } from "@/components/ui/input"; // Import Input component
+import { Chat } from '@/interfaces/chat'; // Import Chat interface
 
 // Simple type for profile data needed here
 type UserProfile = {
@@ -128,12 +129,24 @@ export default function Home() {
            </div>
 
 
-          {/* Right Section: Bookshelf Button, Profile Dropdown or Login Button */}
+          {/* Right Section: Chat, Bookshelf Button, Profile Dropdown or Login Button */}
           <div className="flex items-center justify-end space-x-2 sm:space-x-4">
             {/* Search Icon Button for Mobile */}
             <Button variant="ghost" size="icon" className="sm:hidden">
                 <Search className="h-5 w-5" />
                 <span className="sr-only">Search</span>
+            </Button>
+
+            {/* Chat Button */}
+            <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
+                <Link href="/chat" aria-label="Chat">
+                    <MessageSquare className="h-5 w-5" />
+                </Link>
+            </Button>
+             <Button asChild variant="ghost" size="icon" className="sm:hidden">
+                <Link href="/chat" aria-label="Chat">
+                    <MessageSquare className="h-5 w-5" />
+                </Link>
             </Button>
 
             {/* Bookshelf Button */}
@@ -207,7 +220,6 @@ export default function Home() {
         <BookCategorySection title="Popular Books" books={popularBooks} slug="popular" />
         <BookCategorySection title="Top 100 (Sample)" books={top100Books} slug="top-100" />
 
-         {/* Bookshelf component is no longer rendered here */}
       </main>
 
        {/* Optional Footer (Consider adding later if needed) */}
