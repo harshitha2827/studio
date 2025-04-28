@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book type
-// import { Bookshelf } from "@/components/bookshelf"; // Removed direct import
+// import { Bookshelf } from "@/components/bookshelf"; // Removed direct import - It now lives on /bookshelf
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { LogOut, User, Settings, History, BookMarked } from "lucide-react"; // Import necessary icons, added BookMarked
@@ -131,17 +131,16 @@ export default function Home() {
           {/* Right Section: Bookshelf Button, Profile Dropdown or Login Button */}
           <div className="flex flex-1 items-center justify-end space-x-4">
             <nav className="flex items-center space-x-2">
-              {/* Bookshelf Button - Link to the bookshelf section (or page) */}
-              {/* NOTE: Linking to #bookshelf-section might need adjustment if Bookshelf moves to a new page */}
+              {/* Bookshelf Button - Link to the bookshelf page */}
               <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-                <Link href="/#bookshelf-section"> {/* Adjust href if Bookshelf moves to a separate page like /bookshelf */}
+                <Link href="/bookshelf"> {/* Updated href */}
                   <BookMarked className="mr-2 h-4 w-4" />
                   My Bookshelf
                 </Link>
               </Button>
               {/* Icon only button for mobile */}
                <Button asChild variant="ghost" size="icon" className="sm:hidden">
-                 <Link href="/#bookshelf-section" aria-label="My Bookshelf"> {/* Adjust href if Bookshelf moves */}
+                 <Link href="/bookshelf" aria-label="My Bookshelf"> {/* Updated href */}
                    <BookMarked className="h-5 w-5" />
                  </Link>
                </Button>
@@ -204,11 +203,7 @@ export default function Home() {
         <BookCategorySection title="Popular Books" books={popularBooks} />
         <BookCategorySection title="Top 100 (Sample)" books={top100Books} />
 
-         {/* Removed Separator and Bookshelf component */}
-         {/* <hr className="border-border my-8" /> */}
-         {/* <div id="bookshelf-section" className="scroll-mt-16"> */}
-            {/* <Bookshelf /> */}
-         {/* </div> */}
+         {/* Bookshelf component is no longer rendered here */}
       </main>
 
        {/* Optional Footer (Consider adding later if needed) */}
@@ -222,4 +217,3 @@ export default function Home() {
     </div>
   );
 }
-
