@@ -3,7 +3,6 @@
 
 import * as React from 'react';
 import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book type
-// import { Bookshelf } from "@/components/bookshelf"; // Removed direct import - It now lives on /bookshelf
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { LogOut, User, Settings, History, BookMarked } from "lucide-react"; // Import necessary icons, added BookMarked
@@ -25,35 +24,44 @@ type UserProfile = {
   avatarUrl?: string; // Can be a URL or a data URI
 };
 
-// --- Mock Data Generation (Adapted from bookshelf.tsx for example sections) ---
+// --- Mock Data Generation (Moved outside component to prevent hydration mismatch) ---
 // IMPORTANT: In a real app, this data would come from an API
 const generateSampleBooks = (count: number, seedPrefix: string): Book[] => {
   const books: Book[] = [];
-  const startDate = new Date("2023-01-01").getTime();
-  const endDate = new Date().getTime();
+  const baseDate = new Date("2023-01-01").getTime(); // Use a fixed base date for reproducibility
+  // Use a simple pseudo-random number generator for consistency if needed, or just predictable data
+  let pseudoRandom = 1;
+  const pseudoRandomNext = () => {
+    const x = Math.sin(pseudoRandom++) * 10000;
+    return x - Math.floor(x);
+  }
+
 
   for (let i = 1; i <= count; i++) {
-     const randomTimestamp = startDate + Math.random() * (endDate - startDate);
-     const randomDate = new Date(randomTimestamp);
-     // For discovery sections, status/rating isn't directly relevant unless showing community data
-     const status: ReadingStatus = 'want-to-read'; // Default status for general books
-     const hasCover = Math.random() > 0.1; // 90% chance of cover
+     // Use pseudo-random or predictable values instead of Math.random()
+     const randomOffset = pseudoRandomNext() * (new Date().getTime() - baseDate);
+     const randomDate = new Date(baseDate + randomOffset);
+     const status: ReadingStatus = 'want-to-read'; // Consistent status for demo
+     const hasCover = (i % 10 !== 0); // Predictable cover assignment (e.g., 90%)
+     const authorNum = Math.floor(i / 5) + 1; // Predictable author
 
     books.push({
-      id: `${seedPrefix}-${i}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      // Use predictable IDs - combining prefix and index should be sufficient for mock data
+      id: `${seedPrefix}-${i}`,
       title: `${seedPrefix} Book ${i}`,
-      author: `Author ${Math.floor(Math.random() * 50) + 1}`, // Random author
+      author: `Author ${authorNum}`,
       status: status,
-      // Rating/notes usually aren't shown in discovery sections unless aggregated
-      addedDate: randomDate, // Represents when it became "trending" or "popular"
-      coverUrl: hasCover ? `https://picsum.photos/seed/${seedPrefix}${i}/300/400` : `https://picsum.photos/seed/defaultBook/300/400`, // Fallback cover
-      isbn: `978-${Math.floor(Math.random() * 10000000000).toString().padStart(10, '0')}`,
+      addedDate: randomDate, // Date can vary, but generation logic is now deterministic per seed
+      coverUrl: hasCover ? `https://picsum.photos/seed/${seedPrefix}${i}/300/400` : `https://picsum.photos/seed/defaultBook/300/400`, // Consistent URL generation
+      // ISBN generation can remain somewhat random for visuals, but avoid Date.now()
+      isbn: `978-0-${Math.floor(pseudoRandomNext() * 100000000).toString().padStart(8, '0')}-${i % 10}`,
     });
   }
-  // Sort might vary based on category (e.g., trending by recent activity, popular by ratings)
+  // Consistent sorting
   return books.sort((a, b) => b.addedDate.getTime() - a.addedDate.getTime());
 };
 
+// Generate the data once at module load time
 const trendingBooks = generateSampleBooks(15, 'Trending');
 const popularBooks = generateSampleBooks(15, 'Popular');
 const top100Books = generateSampleBooks(15, 'Top100'); // Showing first 15 of top 100 for brevity
@@ -68,10 +76,12 @@ export default function Home() {
   const { toast } = useToast();
 
   React.useEffect(() => {
+    // This effect runs only on the client after hydration
     setIsClient(true);
 
     if (isLoggedIn) {
-       const storedData = typeof window !== 'undefined' ? localStorage.getItem('userProfile') : null;
+       // Access localStorage only on the client
+       const storedData = localStorage.getItem('userProfile');
        if (storedData) {
             try {
                 const parsed: { name?: string; avatarUrl?: string; dob?: string } = JSON.parse(storedData);
@@ -86,11 +96,12 @@ export default function Home() {
     } else {
         setUserProfile(null);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn]); // Rerun if login state changes
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserProfile(null);
+    // Access localStorage only on the client
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userProfile');
     }
@@ -146,6 +157,7 @@ export default function Home() {
                </Button>
 
 
+              {/* Only render profile/login state after client mount to avoid hydration mismatch */}
               {isClient && (
                 isLoggedIn && userProfile ? (
                   <DropdownMenu>
@@ -189,7 +201,8 @@ export default function Home() {
                   </Button>
                 )
               )}
-              {!isClient && <div className="h-9 w-9"></div>} {/* Placeholder */}
+              {/* Placeholder during SSR/initial render before client check */}
+              {!isClient && <div className="h-9 w-9 rounded-full bg-muted"></div>}
             </nav>
           </div>
         </div>
@@ -198,7 +211,7 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1 container mx-auto px-4 py-8 space-y-12">
 
-        {/* Book Discovery Sections */}
+        {/* Book Discovery Sections - Use the pre-generated consistent data */}
         <BookCategorySection title="Trending Books" books={trendingBooks} />
         <BookCategorySection title="Popular Books" books={popularBooks} />
         <BookCategorySection title="Top 100 (Sample)" books={top100Books} />
