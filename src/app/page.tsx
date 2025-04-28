@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; //
 import { BookCategorySection } from "@/components/book-category-section"; // Import the new component
 import { generateSampleBooks } from '@/lib/mock-data'; // Import mock data generator
 import { Input } from "@/components/ui/input"; // Import Input component
-import { Chat } from '@/interfaces/chat'; // Import Chat interface
+import type { Chat } from '@/interfaces/chat'; // Import Chat interface
 import { useRouter } from 'next/navigation'; // Import useRouter
 import { cn } from "@/lib/utils";
 
