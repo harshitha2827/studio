@@ -190,7 +190,7 @@ export default function ReadersClubPage() {
 
                 {/* Challenges Icon Button */}
                <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger asChild> {/* Add asChild here */}
                      <Button
                        variant="ghost"
                        size="icon"
@@ -353,5 +353,3 @@ export default function ReadersClubPage() {
     </TooltipProvider>
   );
 }
-
-
