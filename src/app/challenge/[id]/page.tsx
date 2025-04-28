@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { SimpleBookCard } from '@/components/simple-book-card';
 import type { Book } from '@/interfaces/book';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils'; // Import cn
 
 // Re-define the Challenge interface here for this page's use
 // Ensure structure matches the data stored in localStorage from readers-club/page.tsx
@@ -215,10 +216,16 @@ export default function ChallengeDetailPage() {
                     )}
                 </CardContent>
                  <CardFooter className="flex justify-end">
-                     {/* Add action buttons like "Join Challenge", "Mark as Complete", etc. later */}
-                      <Button disabled={isCompleted || !isActive}>
-                        {isActive ? 'Update Progress' : isUpcoming ? 'Starts Soon' : 'View Results'}
-                      </Button>
+                     {/* Link to update page if active, otherwise show disabled button */}
+                      {isActive ? (
+                        <Button asChild>
+                           <Link href={`/challenge/${challengeId}/update`}>Update Progress</Link>
+                        </Button>
+                      ) : (
+                        <Button disabled>
+                            {isCompleted ? 'View Results' : 'Starts Soon'}
+                        </Button>
+                      )}
                  </CardFooter>
             </Card>
 
@@ -248,3 +255,4 @@ export default function ChallengeDetailPage() {
     </div>
   );
 }
+
