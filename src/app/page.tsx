@@ -129,6 +129,7 @@ export default function Home() {
    const handleUserSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!userSearchTerm.trim()) return;
+        // Navigate to the user search results page
         router.push(`/users/search?q=${encodeURIComponent(userSearchTerm.trim())}`);
    };
    const handleMobileUserSearchClick = () => {
@@ -136,6 +137,7 @@ export default function Home() {
        toast({ title: "Enter User Search Term", description: "Please type the user you want to search for." });
        return;
      }
+     // Navigate to the user search results page
      router.push(`/users/search?q=${encodeURIComponent(userSearchTerm.trim())}`);
    };
 
@@ -224,6 +226,7 @@ export default function Home() {
                         className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7"
                         onClick={handleMobileBookSearchClick}
                         aria-label="Submit book search"
+                        type="button" // Explicitly set type
                     >
                         <Search className="h-4 w-4" />
                     </Button>
@@ -244,6 +247,7 @@ export default function Home() {
                          className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7"
                          onClick={handleMobileUserSearchClick}
                          aria-label="Submit user search"
+                         type="button" // Explicitly set type
                      >
                          <UserSearch className="h-4 w-4" />
                      </Button>
@@ -335,6 +339,3 @@ export default function Home() {
     </div>
   );
 }
-    
-
-    

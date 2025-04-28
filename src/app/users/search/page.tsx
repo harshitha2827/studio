@@ -5,15 +5,15 @@ import * as React from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, UserSearch, Frown, User, BookOpen, CheckCircle, Bookmark } from 'lucide-react'; // Added icons
+import { ArrowLeft, UserSearch, Frown, User, BookOpen, CheckCircle, Bookmark } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 
 // --- Mock Data (Replace with actual API/backend fetching) ---
 
-// Mock user profile structure
+// Mock user profile structure (ensure this aligns with data generation)
 interface MockUserProfile {
     id: string;
     name: string;
@@ -23,10 +23,12 @@ interface MockUserProfile {
     readingCount: number;
     finishedCount: number;
     wantToReadCount: number;
-    // Add more fields if needed (e.g., join date)
 }
 
 // Function to generate mock users based on search term
+// This should ideally be fetched, but we use a mock generator for now.
+// We assume this function exists and works correctly based on previous steps.
+// If it were in this file, it would look something like this:
 const generateMockUsers = (count: number, searchTerm: string): MockUserProfile[] => {
     const users: MockUserProfile[] = [];
     if (!searchTerm) return users; // Return empty if no search term
@@ -40,19 +42,18 @@ const generateMockUsers = (count: number, searchTerm: string): MockUserProfile[]
     }
 
     // Create a larger pool to filter from, ensuring some variety
-    const potentialUsersCount = Math.max(count * 5, 50); // Generate a pool of 50 users max
+    const potentialUsersCount = Math.max(count * 5, 50);
     for (let i = 1; i <= potentialUsersCount; i++) {
-        const seed = i + termLower.length; // Simple seed based on index and search term length
-        const userId = `user${i}`;
-        // Generate diverse first and last names from predefined lists
+        const seed = i + termLower.length;
         const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Evan', 'Fiona', 'George', 'Hannah', 'Ian', 'Julia', 'Kevin', 'Laura', 'Mike', 'Nora', 'Oscar', 'Penny', 'Quinn', 'Rachel', 'Steve', 'Tina'];
         const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Martin', 'Jackson'];
 
         const firstName = firstNames[Math.floor(pseudoRandom(seed) * firstNames.length)];
         const lastName = lastNames[Math.floor(pseudoRandom(seed + 1) * lastNames.length)];
         const name = `${firstName} ${lastName}`;
-        const username = `${firstName.toLowerCase()}_${lastName.toLowerCase().substring(0, 3)}${i}`; // More unique username
-        const avatarUrl = `https://i.pravatar.cc/150?u=${userId}`; // Consistent avatar based on ID
+        const username = `${firstName.toLowerCase()}_${lastName.toLowerCase().substring(0, 3)}${i}`;
+        const userId = `user-${username}`; // More specific ID
+        const avatarUrl = `https://i.pravatar.cc/150?u=${userId}`;
 
         // Only add if name or username contains the search term
         if (name.toLowerCase().includes(termLower) || username.toLowerCase().includes(termLower)) {
@@ -61,18 +62,15 @@ const generateMockUsers = (count: number, searchTerm: string): MockUserProfile[]
                 name: name,
                 username: username,
                 avatarUrl: avatarUrl,
-                 // More varied bio based on random index
-                 bio: `Mock bio for ${name}. ${['Passionate reader', 'Book enthusiast', 'Casual browser', 'Genre explorer'][Math.floor(pseudoRandom(seed+2)*4)]} on BookBurst. Currently into ${['sci-fi', 'fantasy', 'mystery', 'history', 'romance', 'thrillers'][Math.floor(pseudoRandom(seed+3)*6)]}.`,
-                readingCount: Math.floor(pseudoRandom(seed + 4) * 10), // 0-9
-                finishedCount: Math.floor(pseudoRandom(seed + 5) * 50) + 5, // 5-54
-                wantToReadCount: Math.floor(pseudoRandom(seed + 6) * 30) + 10, // 10-39
+                bio: `Mock bio for ${name}. ${['Passionate reader', 'Book enthusiast', 'Casual browser', 'Genre explorer'][Math.floor(pseudoRandom(seed+2)*4)]} on BookBurst. Currently into ${['sci-fi', 'fantasy', 'mystery', 'history', 'romance', 'thrillers'][Math.floor(pseudoRandom(seed+3)*6)]}.`,
+                readingCount: Math.floor(pseudoRandom(seed + 4) * 10),
+                finishedCount: Math.floor(pseudoRandom(seed + 5) * 50) + 5,
+                wantToReadCount: Math.floor(pseudoRandom(seed + 6) * 30) + 10,
             });
         }
 
-        // Stop if we have enough results for the requested count
         if (users.length >= count) break;
     }
-    // Sort results alphabetically by name for consistent display order
     return users.sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -110,16 +108,19 @@ export default function UserSearchResultsPage() {
 
     // Effect for searching users
     React.useEffect(() => {
+        // console.log(`Search Effect: query='${query}', isClient=${isClient}`);
         setIsLoading(true);
         if (query && isClient) { // Only search on client and if query exists
             // Simulate API call by generating mock users
             const results = generateMockUsers(20, query); // Generate up to 20 mock results matching query
+            // console.log(`Found ${results.length} users for query '${query}'`);
             setSearchResults(results);
         } else {
+            // console.log("Clearing search results (no query or not client)");
             setSearchResults([]); // Clear results if no query or not client-side
         }
         setIsLoading(false);
-    }, [query, isClient]);
+    }, [query, isClient]); // Re-run when query or client status changes
 
     // Handle clicking on a user card
     const handleUserClick = (username: string) => {
@@ -168,9 +169,9 @@ export default function UserSearchResultsPage() {
                                             {getInitials(user.name)}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <div className="flex-1">
-                                        <CardTitle className="text-xl">{user.name}</CardTitle>
-                                        <CardDescription>@{user.username}</CardDescription>
+                                    <div className="flex-1 overflow-hidden"> {/* Added overflow-hidden */}
+                                        <CardTitle className="text-xl truncate">{user.name}</CardTitle> {/* Added truncate */}
+                                        <CardDescription className="truncate">@{user.username}</CardDescription> {/* Added truncate */}
                                     </div>
                                 </CardHeader>
                                 <CardContent>
