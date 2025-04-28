@@ -112,7 +112,7 @@ export function Bookshelf() {
   // Save active tab to cookie when it changes
   React.useEffect(() => {
     if (isClient) { // Ensure runs only on client
-      setCookie(BOOKSHELF_TAB_COOKIE, activeTab, 30); // Save for 30 days
+      setCookie(BOOKSHELF_TAB_COOKIE, activeTab, 30); // Save for 30 days using utility
     }
   }, [activeTab, isClient]); // Depend on activeTab and isClient
 
