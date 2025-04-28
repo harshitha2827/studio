@@ -5,26 +5,113 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BookOpen, CalendarDays, MessageSquare, Target, Trophy } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, MessageSquare, Target, Trophy, Users, UserCheck } from 'lucide-react'; // Added Users, UserCheck
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SimpleBookCard } from '@/components/simple-book-card'; // For displaying books
 import { generateSampleBooks } from '@/lib/mock-data'; // For mock data
 import { Input } from '@/components/ui/input'; // For discussion input
 import { Textarea } from '@/components/ui/textarea'; // For discussion input
+import type { Book } from '@/interfaces/book';
+import { Progress } from '@/components/ui/progress'; // Import Progress component
 
-// Mock Data (replace with actual data fetching)
-const mockCurrentlyReading = generateSampleBooks(5, 'readers-club-reading'); // 5 books being read
-const mockMembers = [
+// --- Enhanced Mock Data (Could be moved to a separate file later) ---
+
+// Assume some base user data for hosts/participants
+const mockUsers = [
   { id: 'user1', name: 'Alice', avatarUrl: 'https://i.pravatar.cc/40?u=alice' },
   { id: 'user2', name: 'Bob', avatarUrl: 'https://i.pravatar.cc/40?u=bob' },
   { id: 'user3', name: 'Charlie', avatarUrl: 'https://i.pravatar.cc/40?u=charlie' },
   { id: 'user4', name: 'Diana', avatarUrl: 'https://i.pravatar.cc/40?u=diana' },
+  { id: 'user5', name: 'Evan', avatarUrl: 'https://i.pravatar.cc/40?u=evan' },
 ];
-const mockChallenges = [
-  { id: 'c1', title: 'Read 5 Books This Month', progress: 60, icon: <Target className="h-5 w-5 text-primary" /> },
-  { id: 'c2', title: 'Finish "War and Peace"', progress: 25, icon: <BookOpen className="h-5 w-5 text-primary" /> },
-  { id: 'm1', title: 'Weekend Reading Marathon', progress: 100, icon: <Trophy className="h-5 w-5 text-yellow-500" /> },
+
+// Function to get initials for avatars
+const getInitials = (name: string | undefined): string => {
+    if (!name) return 'U';
+    const names = name.trim().split(' ');
+    return names
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+};
+
+interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  progress: number; // Percentage completion (0-100)
+  icon: React.ReactNode;
+  startDate: Date;
+  endDate: Date;
+  host: typeof mockUsers[0]; // Use one of the mock users
+  rewardPoints: number;
+  requiredBooks?: Book[];
+  participants: typeof mockUsers; // Array of participants
+}
+
+const mockChallenges: Challenge[] = [
+  {
+    id: 'challenge-monthly-5',
+    title: 'Read 5 Books This Month',
+    description: 'Challenge yourself to read at least five books of any genre before the month ends. Track your progress and discuss your reads!',
+    progress: 60,
+    icon: <Target className="h-5 w-5 text-primary" />,
+    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59), // End of current month
+    host: mockUsers[0], // Alice hosts
+    rewardPoints: 50,
+    requiredBooks: undefined, // No specific books required
+    participants: [mockUsers[0], mockUsers[2], mockUsers[4]], // Alice, Charlie, Evan
+  },
+  {
+    id: 'challenge-war-peace',
+    title: 'Finish "War and Peace"',
+    description: 'A marathon challenge to conquer Leo Tolstoy\'s epic novel. Share your thoughts on characters, themes, and historical context.',
+    progress: 25,
+    icon: <BookOpen className="h-5 w-5 text-primary" />,
+    startDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // Started 15 days ago
+    endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000), // Ends in 45 days
+    host: mockUsers[1], // Bob hosts
+    rewardPoints: 100,
+    requiredBooks: generateSampleBooks(1, 'war-and-peace'), // Generate a mock 'War and Peace'
+    participants: [mockUsers[1], mockUsers[3]], // Bob, Diana
+  },
+  {
+    id: 'marathon-weekend',
+    title: 'Weekend Reading Marathon',
+    description: 'See how many pages or books you can read over the weekend! Post your updates and cheer each other on.',
+    progress: 100, // Assume completed last weekend
+    icon: <Trophy className="h-5 w-5 text-yellow-500" />,
+    startDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // Last Friday
+    endDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // Last Sunday
+    host: mockUsers[3], // Diana hosts
+    rewardPoints: 25,
+    requiredBooks: undefined,
+    participants: mockUsers, // Everyone participated
+  },
 ];
+
+// Store challenges in localStorage for the detail page to potentially access
+// Note: This is a workaround for mock data. Real apps would fetch from a backend.
+if (typeof window !== 'undefined') {
+    try {
+        const challengesToStore = mockChallenges.map(c => ({
+            ...c,
+            startDate: c.startDate.toISOString(),
+            endDate: c.endDate.toISOString(),
+            icon: undefined, // Remove React node before storing
+            requiredBooks: c.requiredBooks?.map(b => ({ ...b, addedDate: b.addedDate.toISOString() })), // Serialize dates
+        }));
+        localStorage.setItem('mockChallenges', JSON.stringify(challengesToStore));
+    } catch (e) {
+        console.error("Failed to store mock challenges in localStorage", e);
+    }
+}
+
+
+// --- Other Mock Data (remains the same) ---
+const mockCurrentlyReading = generateSampleBooks(5, 'readers-club-reading'); // 5 books being read
 const mockDiscussionPosts = [
     { id: 'p1', userId: 'user1', userName: 'Alice', text: "Just started 'Dune'! Anyone else reading it?", timestamp: new Date(Date.now() - 3600 * 1000 * 2), avatarUrl: 'https://i.pravatar.cc/40?u=alice'},
     { id: 'p2', userId: 'user2', userName: 'Bob', text: "I finished 'Project Hail Mary' last week - amazing!", timestamp: new Date(Date.now() - 3600 * 1000 * 5), avatarUrl: 'https://i.pravatar.cc/40?u=bob'},
@@ -42,16 +129,6 @@ export default function ReadersClubPage() {
         setDiscussionPost(''); // Clear input
         // Maybe add optimistic update to mockDiscussionPosts
     };
-
-    const getInitials = (name: string | undefined): string => {
-        if (!name) return 'U';
-        const names = name.trim().split(' ');
-        return names
-          .map((n) => n[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase();
-      };
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -102,8 +179,8 @@ export default function ReadersClubPage() {
                 <form onSubmit={handlePostSubmit} className="flex items-start gap-3">
                     <Avatar className="h-9 w-9 border mt-1">
                          {/* TODO: Use actual logged-in user avatar */}
-                        <AvatarImage src={mockMembers[0].avatarUrl} alt={mockMembers[0].name} />
-                        <AvatarFallback>{getInitials(mockMembers[0].name)}</AvatarFallback>
+                        <AvatarImage src={mockUsers[0].avatarUrl} alt={mockUsers[0].name} />
+                        <AvatarFallback>{getInitials(mockUsers[0].name)}</AvatarFallback>
                     </Avatar>
                     <Textarea
                         placeholder="Start a discussion..."
@@ -150,19 +227,25 @@ export default function ReadersClubPage() {
           <CardContent className="space-y-4">
             {mockChallenges.length > 0 ? (
                 mockChallenges.map(challenge => (
-                    <div key={challenge.id} className="flex items-center gap-4 p-3 border rounded-md bg-muted/40">
-                        <div className="text-primary">
-                            {challenge.icon}
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-medium text-foreground">{challenge.title}</p>
-                             {/* Simple progress bar (replace with actual Progress component later if needed) */}
-                            <div className="h-2 mt-1 w-full bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-primary transition-all duration-500" style={{ width: `${challenge.progress}%` }}></div>
+                    <div key={challenge.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 border rounded-md bg-muted/40">
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <div className="text-primary flex-shrink-0">
+                                {challenge.icon}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{challenge.progress}% complete</p>
+                            <div className="flex-1">
+                                <p className="font-medium text-foreground">{challenge.title}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{challenge.progress}% complete</p>
+                            </div>
                         </div>
-                        <Button variant="outline" size="sm">View Details</Button>
+                        <div className="w-full sm:flex-1">
+                             <Progress value={challenge.progress} aria-label={`${challenge.title} progress`} className="h-2"/>
+                        </div>
+                        {/* Link to the challenge detail page */}
+                        <Button variant="outline" size="sm" asChild className="w-full mt-2 sm:w-auto sm:mt-0 sm:ml-auto">
+                           <Link href={`/challenge/${challenge.id}`}>
+                               View Details
+                           </Link>
+                        </Button>
                     </div>
                 ))
             ) : (
@@ -179,10 +262,10 @@ export default function ReadersClubPage() {
         {/* Members Section */}
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center">Club Members ({mockMembers.length})</CardTitle>
+            <CardTitle className="flex items-center">Club Members ({mockUsers.length})</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
-            {mockMembers.map(member => (
+            {mockUsers.map(member => (
               <div key={member.id} className="flex flex-col items-center gap-1">
                 <Avatar className="h-10 w-10 border">
                   <AvatarImage src={member.avatarUrl} alt={member.name} />
