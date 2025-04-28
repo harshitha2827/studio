@@ -26,9 +26,11 @@ interface MockUserProfile {
     // Add more fields if needed (e.g., join date)
 }
 
-// Function to generate mock users
+// Function to generate mock users based on search term
 const generateMockUsers = (count: number, searchTerm: string): MockUserProfile[] => {
     const users: MockUserProfile[] = [];
+    if (!searchTerm) return users; // Return empty if no search term
+
     const termLower = searchTerm.toLowerCase();
 
     // Simple pseudo-random number generator based on seed
@@ -38,34 +40,40 @@ const generateMockUsers = (count: number, searchTerm: string): MockUserProfile[]
     }
 
     // Create a larger pool to filter from, ensuring some variety
-    const potentialUsersCount = Math.max(count * 5, 20);
+    const potentialUsersCount = Math.max(count * 5, 50); // Generate a pool of 50 users max
     for (let i = 1; i <= potentialUsersCount; i++) {
         const seed = i + termLower.length; // Simple seed based on index and search term length
         const userId = `user${i}`;
-        const firstName = ['Alice', 'Bob', 'Charlie', 'Diana', 'Evan', 'Fiona', 'George', 'Hannah', 'Ian', 'Julia'][Math.floor(pseudoRandom(seed) * 10)];
-        const lastName = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'][Math.floor(pseudoRandom(seed + 1) * 8)];
-        const name = `${firstName} ${lastName}`;
-        const username = `${firstName.toLowerCase()}_${lastName.toLowerCase().substring(0, 3)}${i}`;
-        const avatarUrl = `https://i.pravatar.cc/150?u=${userId}`; // Consistent avatar
+        // Generate diverse first and last names from predefined lists
+        const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Evan', 'Fiona', 'George', 'Hannah', 'Ian', 'Julia', 'Kevin', 'Laura', 'Mike', 'Nora', 'Oscar', 'Penny', 'Quinn', 'Rachel', 'Steve', 'Tina'];
+        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Martin', 'Jackson'];
 
-        // Only add if name or username matches the search term
+        const firstName = firstNames[Math.floor(pseudoRandom(seed) * firstNames.length)];
+        const lastName = lastNames[Math.floor(pseudoRandom(seed + 1) * lastNames.length)];
+        const name = `${firstName} ${lastName}`;
+        const username = `${firstName.toLowerCase()}_${lastName.toLowerCase().substring(0, 3)}${i}`; // More unique username
+        const avatarUrl = `https://i.pravatar.cc/150?u=${userId}`; // Consistent avatar based on ID
+
+        // Only add if name or username contains the search term
         if (name.toLowerCase().includes(termLower) || username.toLowerCase().includes(termLower)) {
             users.push({
                 id: userId,
                 name: name,
                 username: username,
                 avatarUrl: avatarUrl,
-                bio: `Mock bio for ${name}. Passionate reader and member of BookBurst since a random date. Loves ${['sci-fi', 'fantasy', 'mystery', 'history'][Math.floor(pseudoRandom(seed+2)*4)]}.`,
-                readingCount: Math.floor(pseudoRandom(seed + 3) * 10),
-                finishedCount: Math.floor(pseudoRandom(seed + 4) * 50) + 5,
-                wantToReadCount: Math.floor(pseudoRandom(seed + 5) * 30) + 10,
+                 // More varied bio based on random index
+                 bio: `Mock bio for ${name}. ${['Passionate reader', 'Book enthusiast', 'Casual browser', 'Genre explorer'][Math.floor(pseudoRandom(seed+2)*4)]} on BookBurst. Currently into ${['sci-fi', 'fantasy', 'mystery', 'history', 'romance', 'thrillers'][Math.floor(pseudoRandom(seed+3)*6)]}.`,
+                readingCount: Math.floor(pseudoRandom(seed + 4) * 10), // 0-9
+                finishedCount: Math.floor(pseudoRandom(seed + 5) * 50) + 5, // 5-54
+                wantToReadCount: Math.floor(pseudoRandom(seed + 6) * 30) + 10, // 10-39
             });
         }
 
-        // Stop if we have enough results
+        // Stop if we have enough results for the requested count
         if (users.length >= count) break;
     }
-    return users;
+    // Sort results alphabetically by name for consistent display order
+    return users.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 
@@ -104,8 +112,8 @@ export default function UserSearchResultsPage() {
     React.useEffect(() => {
         setIsLoading(true);
         if (query && isClient) { // Only search on client and if query exists
-            // Simulate API call
-            const results = generateMockUsers(20, query); // Generate up to 20 mock results
+            // Simulate API call by generating mock users
+            const results = generateMockUsers(20, query); // Generate up to 20 mock results matching query
             setSearchResults(results);
         } else {
             setSearchResults([]); // Clear results if no query or not client-side
@@ -210,5 +218,3 @@ export default function UserSearchResultsPage() {
         </div>
     );
 }
-
-    

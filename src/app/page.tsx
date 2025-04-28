@@ -293,14 +293,19 @@ export default function Home() {
                       <DropdownMenuSeparator />
                        {/* Profile link uses username */}
                        <DropdownMenuItem asChild className="cursor-pointer">
-                           <button onClick={() => navigate(`/profile/${userProfile.username || ''}`)} className="flex items-center w-full">
+                           {/* Use button inside DropdownMenuItem for better control and accessibility */}
+                           <button
+                             onClick={() => navigate(`/profile/${userProfile.username || ''}`)}
+                             className="flex items-center w-full text-left px-2 py-1.5 text-sm" // Match item styling
+                             disabled={!userProfile.username} // Disable if no username
+                           >
                              <User className="mr-2 h-4 w-4" />
                              <span>My Profile</span>
                            </button>
                        </DropdownMenuItem>
                        {/* Settings link */}
                        <DropdownMenuItem asChild className="cursor-pointer">
-                           <button onClick={() => navigate('/settings')} className="flex items-center w-full">
+                           <button onClick={() => navigate('/settings')} className="flex items-center w-full text-left px-2 py-1.5 text-sm">
                              <Settings className="mr-2 h-4 w-4" />
                              <span>Settings</span>
                            </button>
