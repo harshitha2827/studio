@@ -53,10 +53,11 @@ export default function Home() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile Details</span>
-                 {/* Later: Link href="/profile" */}
+              <DropdownMenuItem asChild>
+                <Link href="/profile"> {/* Link to the profile page */}
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile Details</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <History className="mr-2 h-4 w-4" />
