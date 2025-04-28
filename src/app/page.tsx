@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book type
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, User, Settings, History, BookMarked } from "lucide-react"; // Import necessary icons, added BookMarked
+import { LogOut, User, Settings, History, BookMarked, Search } from "lucide-react"; // Added Search icon
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast"; // Import useToast hook
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
 import { BookCategorySection } from "@/components/book-category-section"; // Import the new component
 import { generateSampleBooks } from '@/lib/mock-data'; // Import mock data generator
+import { Input } from "@/components/ui/input"; // Import Input component
 
 // Simple type for profile data needed here
 type UserProfile = {
@@ -26,10 +27,10 @@ type UserProfile = {
 };
 
 
-// Generate the data once at module load time
-const trendingBooks = generateSampleBooks(15, 'trending'); // Use slug as seed prefix
-const popularBooks = generateSampleBooks(15, 'popular'); // Use slug as seed prefix
-const top100Books = generateSampleBooks(15, 'top-100'); // Use slug as seed prefix
+// Generate the data once at module load time - ensuring consistency
+const trendingBooks = generateSampleBooks(15, 'trending');
+const popularBooks = generateSampleBooks(15, 'popular');
+const top100Books = generateSampleBooks(15, 'top-100');
 
 
 export default function Home() {
@@ -37,6 +38,7 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = React.useState(true); // Assume logged in for demo
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
   const [isClient, setIsClient] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState(''); // State for the search bar
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -88,37 +90,63 @@ export default function Home() {
       .toUpperCase();
    };
 
+   const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchTerm.trim()) return;
+        // In a real app, navigate to a search results page or filter current view
+        toast({
+            title: "Search Submitted",
+            description: `Searching for: ${searchTerm} (functionality not implemented)`,
+        });
+   };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-          {/* App Title */}
-          <div className="flex gap-6 md:gap-10">
+          {/* Left Section: App Title & Search */}
+          <div className="flex gap-4 md:gap-6 items-center flex-1 sm:flex-none">
              <Link href="/" className="flex items-center space-x-2">
                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v16H6.5a2.5 2.5 0 0 1 0-5H20"></path>
                </svg>
                <span className="inline-block font-bold">BookShelfie</span>
              </Link>
+
+             {/* Search Bar */}
+             <form onSubmit={handleSearchSubmit} className="hidden sm:flex relative flex-grow max-w-xs items-center">
+                <Input
+                    type="search"
+                    placeholder="Search books..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-9 text-sm" // Add padding for icon
+                 />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+             </form>
            </div>
 
+
           {/* Right Section: Bookshelf Button, Profile Dropdown or Login Button */}
-          <div className="flex flex-1 items-center justify-end space-x-4">
-            <nav className="flex items-center space-x-2">
-              {/* Bookshelf Button - Link to the bookshelf page */}
-              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-                <Link href="/bookshelf"> {/* Updated href */}
-                  <BookMarked className="mr-2 h-4 w-4" />
-                  My Bookshelf
-                </Link>
-              </Button>
-              {/* Icon only button for mobile */}
-               <Button asChild variant="ghost" size="icon" className="sm:hidden">
-                 <Link href="/bookshelf" aria-label="My Bookshelf"> {/* Updated href */}
-                   <BookMarked className="h-5 w-5" />
-                 </Link>
-               </Button>
+          <div className="flex items-center justify-end space-x-2 sm:space-x-4">
+            {/* Search Icon Button for Mobile */}
+            <Button variant="ghost" size="icon" className="sm:hidden">
+                <Search className="h-5 w-5" />
+                <span className="sr-only">Search</span>
+            </Button>
+
+            {/* Bookshelf Button */}
+             <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
+               <Link href="/bookshelf" aria-label="My Bookshelf">
+                 <BookMarked className="h-5 w-5" />
+               </Link>
+             </Button>
+             <Button asChild variant="ghost" size="icon" className="sm:hidden">
+               <Link href="/bookshelf" aria-label="My Bookshelf">
+                 <BookMarked className="h-5 w-5" />
+               </Link>
+             </Button>
 
 
               {/* Only render profile/login state after client mount to avoid hydration mismatch */}
@@ -167,7 +195,6 @@ export default function Home() {
               )}
               {/* Placeholder during SSR/initial render before client check */}
               {!isClient && <div className="h-9 w-9 rounded-full bg-muted"></div>}
-            </nav>
           </div>
         </div>
       </header>
