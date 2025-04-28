@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label'; // Import Label
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Star, Users, ThumbsUp, MessageSquare, Share2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, ThumbsUp, MessageSquare, Share2 } from 'lucide-react'; // Removed Star as StarRating handles it
 import { useToast } from '@/hooks/use-toast';
 import { generateSampleBooks } from '@/lib/mock-data'; // For finding book by ID in mock data
 import { StarRating } from '@/components/star-rating'; // Import StarRating
@@ -51,25 +52,33 @@ export default function BookDetailPage() {
   const [comment, setComment] = React.useState(''); // State for the comment input
 
   // Mocked engagement data - generated based on bookId for consistency per page load
-  const mockReaderCount = React.useMemo(() => Math.floor(pseudoRandom(bookId.hashCode()) * 5000) + 100, [bookId]);
-  const mockLikeCount = React.useMemo(() => Math.floor(mockReaderCount * (pseudoRandom(bookId.hashCode() + 1) * 0.5 + 0.2)), [mockReaderCount, bookId]);
+  const mockReaderCount = React.useMemo(() => {
+      if (!bookId) return 100; // Default if no bookId yet
+      return Math.floor(pseudoRandom(bookId.hashCode()) * 5000) + 100;
+  }, [bookId]);
+  const mockLikeCount = React.useMemo(() => {
+      if (!bookId) return 20; // Default if no bookId yet
+       return Math.floor(mockReaderCount * (pseudoRandom(bookId.hashCode() + 1) * 0.5 + 0.2));
+  }, [mockReaderCount, bookId]);
 
   // Simple hash function for pseudo-random generation based on string ID
   function pseudoRandom(seed: number): number {
       let x = Math.sin(seed) * 10000;
       return x - Math.floor(x);
   }
-  // Extend string prototype for hashCode (simple implementation)
-  String.prototype.hashCode = function() {
-    var hash = 0, i, chr;
-    if (this.length === 0) return hash;
-    for (i = 0; i < this.length; i++) {
-      chr   = this.charCodeAt(i);
-      hash  = ((hash << 5) - hash) + chr;
-      hash |= 0; // Convert to 32bit integer
-    }
-    return hash;
-  };
+  // Extend string prototype for hashCode (simple implementation) - Ensure it's declared safely
+  if (typeof String.prototype.hashCode === 'undefined') {
+      String.prototype.hashCode = function() {
+        var hash = 0, i, chr;
+        if (this.length === 0) return hash;
+        for (i = 0; i < this.length; i++) {
+          chr   = this.charCodeAt(i);
+          hash  = ((hash << 5) - hash) + chr;
+          hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
+      };
+  }
 
 
   // Effect to "fetch" book data when bookId changes
@@ -156,13 +165,17 @@ export default function BookDetailPage() {
              books[existingIndex] = { ...updatedBook, addedDate: preservedAddedDate };
         } else {
              // Add as a new book if it wasn't found (e.g., user adds it directly from detail page)
+             // Use current date as addedDate ONLY if adding new
              books.push({ ...updatedBook, addedDate: new Date() });
         }
 
         // Ensure dates are stored as ISO strings for reliable serialization
         const booksToSave = books.map(b => ({
            ...b,
-           addedDate: b.addedDate.toISOString(),
+           // Ensure addedDate is valid before calling toISOString
+           addedDate: b.addedDate instanceof Date && !isNaN(b.addedDate.getTime())
+                      ? b.addedDate.toISOString()
+                      : new Date().toISOString(), // Fallback to now if invalid
         }));
         localStorage.setItem('bookshelfBooks', JSON.stringify(booksToSave));
      }
@@ -174,16 +187,25 @@ export default function BookDetailPage() {
 
      setCurrentStatus(newStatus); // Update local UI state immediately
 
+     // Determine rating based on new status
+     const newRating = newStatus === 'finished' ? currentRating : undefined;
+
      // Create the updated book data object
      const updatedBookData: Book = {
        ...book, // Base data from the found book
        status: newStatus, // The new status
-       rating: newStatus === 'finished' ? currentRating : undefined, // Keep rating if finished, else clear
+       rating: newRating, // Update rating based on status
        // Add notes if they exist in the current book state, otherwise keep notes from original fetch or undefined
        notes: book.notes,
+       // Preserve other fetched details
+       coverUrl: book.coverUrl,
+       isbn: book.isbn,
+       pageCount: book.pageCount,
+       authorBio: book.authorBio,
+       addedDate: book.addedDate, // Preserve original added date unless adding new
      };
 
-     setBook(prevBook => ({ ...prevBook!, status: newStatus, rating: updatedBookData.rating })); // Update the main book state for UI consistency
+     setBook(prevBook => ({ ...prevBook!, status: newStatus, rating: newRating })); // Update the main book state for UI consistency
      updateBookInStorage(updatedBookData); // Save the changes to localStorage
 
      toast({
@@ -210,7 +232,13 @@ export default function BookDetailPage() {
        ...book, // Base data
        status: currentStatus, // Keep current status ('finished')
        rating: newRating, // Apply the new rating
-       notes: book.notes, // Preserve existing notes
+       // Preserve other details
+       notes: book.notes,
+       coverUrl: book.coverUrl,
+       isbn: book.isbn,
+       pageCount: book.pageCount,
+       authorBio: book.authorBio,
+       addedDate: book.addedDate,
      };
 
      setBook(prevBook => ({ ...prevBook!, rating: newRating })); // Update main book state
@@ -352,7 +380,7 @@ export default function BookDetailPage() {
                       </div>
                     )}
                      {/* Display read-only stars if finished but not allowing change now */}
-                    {displayStatus !== 'finished' && book.rating && (
+                    {displayStatus !== 'finished' && book.rating !== undefined && book.rating > 0 && (
                         <div>
                             <h3 className="mb-2 font-semibold text-foreground">Last Rating</h3>
                             <StarRating rating={book.rating} size={24} readOnly={true} />
@@ -381,7 +409,7 @@ export default function BookDetailPage() {
                         {/* Placeholder for Comment count - Requires fetching actual comments */}
                          <div className="flex items-center" title={`View Comments`}>
                              <MessageSquare className="mr-1.5 h-4 w-4" />
-                              <span>{/* Actual comment count */}</span>
+                              <span>{/* TODO: Actual comment count */}</span>
                          </div>
                     </div>
 
@@ -459,7 +487,7 @@ export default function BookDetailPage() {
                          <p className="mt-1 text-xs text-muted-foreground/70">1 week ago</p>
                     </div>
                  </div>
-                 {/* Add more mock comments or a "Load More Comments" button */}
+                 {/* TODO: Add more mock comments or a "Load More Comments" button */}
               </div>
 
               <Separator className="my-6"/>
@@ -495,14 +523,15 @@ declare global {
     }
 }
 
-if (!String.prototype.hashCode) {
+// Conditional definition moved here, outside component body
+if (typeof String.prototype.hashCode === 'undefined') {
     String.prototype.hashCode = function() {
         var hash = 0, i, chr;
         if (this.length === 0) return hash;
         for (i = 0; i < this.length; i++) {
-        chr   = this.charCodeAt(i);
-        hash  = ((hash << 5) - hash) + chr;
-        hash |= 0; // Convert to 32bit integer
+          chr   = this.charCodeAt(i);
+          hash  = ((hash << 5) - hash) + chr;
+          hash |= 0; // Convert to 32bit integer
         }
         return hash;
     };
