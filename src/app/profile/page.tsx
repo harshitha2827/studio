@@ -159,7 +159,7 @@ export default function ProfilePage() {
 
   // Effect for updating image preview when watchedAvatarUrl changes
   React.useEffect(() => {
-      setImagePreview(watchedAvatarUrl);
+      setImagePreview(watchedAvatarUrl || null); // Use null instead of empty string for consistency
   }, [watchedAvatarUrl]);
 
 
@@ -168,6 +168,7 @@ export default function ProfilePage() {
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // Example: 5MB limit
            form.setError('avatarUrl', { type: 'manual', message: 'Image size should not exceed 5MB.' });
+           setImagePreview(form.getValues('avatarUrl') || null); // Reset preview to original if error
            return;
        }
       const reader = new FileReader();
@@ -175,9 +176,11 @@ export default function ProfilePage() {
         const result = reader.result as string;
         setImagePreview(result);
         form.setValue('avatarUrl', result, { shouldValidate: true, shouldDirty: true }); // Update form value with data URL and validate
+        form.clearErrors('avatarUrl'); // Clear previous errors on successful load
       };
       reader.onerror = () => {
         form.setError('avatarUrl', { type: 'manual', message: 'Failed to read image file.' });
+        setImagePreview(form.getValues('avatarUrl') || null); // Reset preview on error
       };
       reader.readAsDataURL(file);
     }
@@ -199,8 +202,11 @@ export default function ProfilePage() {
         title: 'Profile Updated',
         description: 'Your profile information has been saved successfully.',
       });
-       form.reset(data); // Reset form with the saved data to clear dirty state
-       setImagePreview(data.avatarUrl); // Ensure preview is also updated after reset
+       // Reset the form with the *saved* data to clear dirty state
+       // and ensure the form values match the persisted state.
+       form.reset(data);
+       // Explicitly update the preview state after reset to match the saved data
+       setImagePreview(data.avatarUrl || null);
     } catch (error) {
         console.error("Error saving profile:", error);
       toast({
@@ -263,6 +269,7 @@ export default function ProfilePage() {
             onChange={handleFileChange}
             accept="image/png, image/jpeg, image/gif, image/webp" // Be specific about accepted types
             style={{ display: 'none' }}
+            aria-hidden="true" // Hide from accessibility tree
         />
         <input
             type="file"
@@ -271,6 +278,7 @@ export default function ProfilePage() {
             accept="image/*"
             capture="user" // Trigger camera on mobile
             style={{ display: 'none' }}
+            aria-hidden="true" // Hide from accessibility tree
         />
 
        <Card className="w-full max-w-2xl shadow-lg relative">
@@ -278,8 +286,8 @@ export default function ProfilePage() {
             variant="ghost"
             size="icon"
             className="absolute top-4 left-4 text-muted-foreground hover:text-foreground z-10"
-            onClick={() => router.push('/')}
-            aria-label="Back to BookBurst" /* Updated Label */
+            onClick={() => router.push('/')} // Navigate home instead of back
+            aria-label="Back to Home" // Updated Label
           >
            <ArrowLeft className="h-5 w-5" />
          </Button>
@@ -322,7 +330,8 @@ export default function ProfilePage() {
                                 <FormMessage className="text-xs text-center"/>
                                 {/* Hidden input managed by buttons/state, still needed for RHF */}
                                 <FormControl>
-                                    <Input type="hidden" {...field} />
+                                    {/* Use hidden input for RHF, actual file input is separate */}
+                                    <input type="hidden" {...field} value={field.value ?? ''} />
                                 </FormControl>
                             </FormItem>
                         )}
@@ -441,7 +450,7 @@ export default function ProfilePage() {
                                 // Reload default data for the logged-in user
                                 const defaultData = fetchUserData();
                                 form.reset(defaultData);
-                                setImagePreview(defaultData.avatarUrl); // Reset preview as well
+                                setImagePreview(defaultData.avatarUrl || null); // Reset preview as well
                             }}
                             disabled={!form.formState.isDirty || form.formState.isSubmitting}
                           >
@@ -457,4 +466,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
