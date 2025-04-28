@@ -12,10 +12,11 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label'; // Import Label
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, ThumbsUp, MessageSquare, Share2, ExternalLink, FileText } from 'lucide-react'; // Added FileText
+import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, Heart, MessageSquare, Share2, ExternalLink, FileText } from 'lucide-react'; // Replaced ThumbsUp with Heart
 import { useToast } from '@/hooks/use-toast';
 import { generateSampleBooks } from '@/lib/mock-data'; // For finding book by ID in mock data
 import { StarRating } from '@/components/star-rating'; // Import StarRating
+import { cn } from '@/lib/utils'; // Import cn for conditional classes
 
 // --- Helper to find a book by ID ---
 // Define known seeds used across the app for generating initial mock data sets
@@ -113,6 +114,7 @@ export default function BookDetailPage() {
   const [currentStatus, setCurrentStatus] = React.useState<ReadingStatus | undefined>(undefined);
   const [currentRating, setCurrentRating] = React.useState<number>(0);
   const [comment, setComment] = React.useState('');
+  const [isLiked, setIsLiked] = React.useState(false); // State for like status
 
   // --- Mock Data Generation (Consistent per book) ---
   const mockReaderCount = React.useMemo(() => {
@@ -127,7 +129,8 @@ export default function BookDetailPage() {
       return Math.abs(hash % 5000) + 100; // Ensure positive number > 100
   }, [bookId]);
 
-  const mockLikeCount = React.useMemo(() => {
+  // Keep the initial calculation based on hash, but we'll update the displayed count on interaction
+  const initialMockLikeCount = React.useMemo(() => {
       if (!bookId) return 20;
       // Base likes on reader count for some correlation
        let hash = 0;
@@ -140,6 +143,13 @@ export default function BookDetailPage() {
        return Math.floor(mockReaderCount * likeRatio);
   }, [mockReaderCount, bookId]);
 
+   // State for the displayed like count, initialized with mock data
+  const [displayedLikeCount, setDisplayedLikeCount] = React.useState(initialMockLikeCount);
+
+  // Update displayed count when initial count changes (e.g., bookId changes)
+  React.useEffect(() => {
+    setDisplayedLikeCount(initialMockLikeCount);
+  }, [initialMockLikeCount]);
 
   // --- Effects ---
   React.useEffect(() => {
@@ -150,6 +160,7 @@ export default function BookDetailPage() {
       setCurrentStatus(undefined);
       setCurrentRating(0);
       setComment('');
+      setIsLiked(false); // Reset like state
 
       // Simulate fetching book data using the updated findBookById
       const foundBook = findBookById(bookId);
@@ -160,6 +171,10 @@ export default function BookDetailPage() {
         // The findBookById function already prioritizes localStorage, so we can directly use its result.
         setCurrentStatus(foundBook.status);
         setCurrentRating(foundBook.rating ?? 0);
+
+        // --- TODO: Load actual like status from user data ---
+        // For now, it remains false by default. In a real app, check if the user has liked this book.
+        // Example: const userLiked = await fetchUserLikeStatus(bookId); setIsLiked(userLiked);
 
       } else {
          // Only show toast if book is genuinely not found after checking all sources
@@ -333,6 +348,22 @@ export default function BookDetailPage() {
         setComment(''); // Clear comment input after submission
     };
 
+    // Handle Like Button Click
+    const handleLikeClick = () => {
+        const newLikedState = !isLiked;
+        setIsLiked(newLikedState);
+        setDisplayedLikeCount((prevCount) => newLikedState ? prevCount + 1 : prevCount - 1);
+
+        // --- TODO: Implement actual like/unlike logic ---
+        // This would involve sending a request to a backend API to update the like status and count for the user and book.
+        // Example: await api.toggleLikeBook(bookId, newLikedState);
+
+        toast({
+            title: newLikedState ? "Liked!" : "Unliked",
+            description: `You've ${newLikedState ? 'liked' : 'unliked'} ${book?.title}.`,
+        });
+    };
+
   // --- Rendering ---
   if (loading) {
     return (
@@ -460,21 +491,33 @@ export default function BookDetailPage() {
                       </div>
                     )}
 
-                    {/* Engagement Stats */}
-                    <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                        <div className="flex items-center" title={`${mockReaderCount.toLocaleString()} Readers`}>
-                            <Users className="mr-1.5 h-4 w-4" />
-                            <span>{mockReaderCount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center" title={`${mockLikeCount.toLocaleString()} Likes`}>
-                            <ThumbsUp className="mr-1.5 h-4 w-4" />
-                             <span>{mockLikeCount.toLocaleString()}</span>
-                        </div>
-                         <div className="flex items-center" title={`View Comments`}>
-                             <MessageSquare className="mr-1.5 h-4 w-4" />
-                              <span>{/* TODO: Implement actual comment count */}</span>
+                     {/* Engagement Stats & Like Button */}
+                     <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+                         <div className="flex items-center" title={`${mockReaderCount.toLocaleString()} Readers`}>
+                             <Users className="mr-1.5 h-4 w-4" />
+                             <span>{mockReaderCount.toLocaleString()}</span>
                          </div>
-                    </div>
+                         {/* Interactive Like Button */}
+                         <Button
+                             variant="ghost"
+                             size="sm"
+                             className={cn(
+                                 "flex items-center px-2 py-1 -ml-2 text-muted-foreground hover:text-primary", // Adjust padding/margin
+                                 isLiked && "text-red-500 hover:text-red-600"
+                             )}
+                             onClick={handleLikeClick}
+                             title={isLiked ? "Unlike" : "Like"}
+                             aria-pressed={isLiked}
+                         >
+                             <Heart className={cn("mr-1.5 h-4 w-4 transition-colors", isLiked && "fill-current")} />
+                             <span>{displayedLikeCount.toLocaleString()}</span> {/* Use displayed count */}
+                         </Button>
+                          <div className="flex items-center" title={`View Comments`}>
+                              <MessageSquare className="mr-1.5 h-4 w-4" />
+                               <span>{/* TODO: Implement actual comment count */}</span>
+                          </div>
+                     </div>
+
 
                     {/* Author Bio */}
                     {book.authorBio && (
@@ -580,3 +623,4 @@ export default function BookDetailPage() {
   );
 }
 
+    
