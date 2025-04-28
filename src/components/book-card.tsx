@@ -1,6 +1,7 @@
 
 import type { Book } from "@/interfaces/book";
 import Image from "next/image";
+import { useRouter } from 'next/navigation'; // Import useRouter
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const statusLabels: Record<Book['status'], string> = {
 }
 
 export function BookCard({ book, onEdit, onDelete, onStatusChange, onRatingChange }: BookCardProps) {
+  const router = useRouter(); // Get router instance
   const handleRatingChange = (newRating: number) => {
     onRatingChange(book.id, newRating);
   }
@@ -36,13 +38,14 @@ export function BookCard({ book, onEdit, onDelete, onStatusChange, onRatingChang
   // Determine if this card represents an "empty" book with a PDF link
   const isEmptyBookWithPdf = !book.coverUrl && book.blankPdfUrl;
 
-  // Handle clicking the image/placeholder area: open PDF if applicable
+  // Handle clicking the image/placeholder area: open PDF or navigate to detail page
   const handleImageAreaClick = () => {
     if (isEmptyBookWithPdf && book.blankPdfUrl) {
        window.open(book.blankPdfUrl, '_blank', 'noopener,noreferrer');
+    } else if (!isEmptyBookWithPdf) { // Only navigate if it's not a blank PDF book
+       router.push(`/book/${book.id}`);
     }
-    // Potentially navigate to detail page if not PDF? Decide based on desired UX.
-    // For now, clicking the image area only opens the PDF.
+     // If it's an empty book *without* a PDF URL, clicking does nothing currently.
   };
 
   return (
@@ -58,18 +61,20 @@ export function BookCard({ book, onEdit, onDelete, onStatusChange, onRatingChang
         <p className="text-sm text-muted-foreground">{book.author}</p>
       </CardHeader>
       <CardContent className="p-4 pt-0 flex-grow space-y-4">
-         {/* Image/Placeholder Area */}
+         {/* Image/Placeholder Area - Now handles navigation too */}
          <div
            className={cn(
              "mb-4 h-40 relative overflow-hidden rounded bg-muted",
-             isEmptyBookWithPdf && "cursor-pointer flex items-center justify-center" // Add cursor and center content for PDF
+             // Add cursor pointer for both PDF and normal books now
+             "cursor-pointer",
+             isEmptyBookWithPdf && "flex items-center justify-center"
            )}
            onClick={handleImageAreaClick}
-           title={isEmptyBookWithPdf ? "Click to open blank PDF" : ""}
-           role={isEmptyBookWithPdf ? "button" : undefined}
-           tabIndex={isEmptyBookWithPdf ? 0 : undefined}
-           onKeyDown={isEmptyBookWithPdf ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleImageAreaClick(); } : undefined}
-           aria-label={isEmptyBookWithPdf ? `Open blank PDF for ${book.title}` : undefined}
+           title={isEmptyBookWithPdf ? "Click to open blank PDF" : `View details for ${book.title}`}
+           role="button" // Role button is appropriate now for navigation/action
+           tabIndex={0} // Make it focusable
+           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleImageAreaClick(); }} // Keyboard accessibility
+           aria-label={isEmptyBookWithPdf ? `Open blank PDF for ${book.title}` : `View details for ${book.title}`}
          >
             {isEmptyBookWithPdf ? (
                 <FileText className="h-16 w-16 text-muted-foreground opacity-50" />
@@ -81,6 +86,10 @@ export function BookCard({ book, onEdit, onDelete, onStatusChange, onRatingChang
                   fill
                   sizes="(max-width: 768px) 80vw, (max-width: 1024px) 40vw, 25vw"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  // Prevent image drag interfering with click
+                  draggable="false"
+                  // Prioritize images in the viewport? Maybe not for bookshelf view.
+                  // priority={/* condition based on viewport */}
                 />
             )}
           </div>
