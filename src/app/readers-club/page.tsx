@@ -136,6 +136,16 @@ export default function ReadersClubPage() {
         // Maybe add optimistic update to mockDiscussionPosts
     };
 
+    // Function to scroll to the challenges section
+    const scrollToChallenges = (e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent default link behavior
+        const challengesSection = document.getElementById('challenges-section');
+        if (challengesSection) {
+            challengesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
       {/* Header */}
@@ -147,8 +157,22 @@ export default function ReadersClubPage() {
             </Link>
           </Button>
           <h1 className="text-xl font-semibold">Readers Club</h1>
-          {/* Add Header Actions like "Create Challenge" or "Invite Members" later */}
-          <div></div>
+           {/* Header Actions: Challenges Icon Button */}
+           <div className="flex items-center gap-2">
+             <Button
+                variant="ghost"
+                size="icon"
+                onClick={scrollToChallenges}
+                title="View Challenges"
+                aria-label="View reading challenges and marathons"
+                asChild // Use asChild to allow Link behavior
+                >
+                <Link href="#challenges-section"> {/* Link to the anchor ID */}
+                    <Trophy className="h-5 w-5 text-primary" />
+                </Link>
+             </Button>
+             {/* Other icons could go here */}
+           </div>
         </div>
       </header>
 
@@ -225,8 +249,8 @@ export default function ReadersClubPage() {
             </CardContent>
         </Card>
 
-        {/* Challenges & Marathons Section */}
-        <Card className="shadow-lg">
+        {/* Challenges & Marathons Section - Added ID here */}
+        <Card id="challenges-section" className="shadow-lg scroll-mt-20"> {/* Added scroll-mt for header offset */}
           <CardHeader>
             <CardTitle className="flex items-center"><Trophy className="mr-2 h-5 w-5 text-primary" /> Challenges & Marathons</CardTitle>
             <CardDescription>Track group goals and participate in reading events.</CardDescription>
@@ -291,5 +315,6 @@ export default function ReadersClubPage() {
     </div>
   );
 }
+
 
     
