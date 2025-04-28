@@ -84,8 +84,16 @@ export default function Home() {
     // Clear all relevant user data from localStorage on logout
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userProfile');
-      // Clear user credentials (if stored - this part depends on your setup)
-      // Example: localStorage.removeItem(`user_${userProfile?.email}`); // Be careful with this if email isn't available
+
+      // Clear specific user credentials/data
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('user_')) {
+              keysToRemove.push(key);
+          }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
 
       // Clear other session-related data
       localStorage.removeItem('bookshelfBooks');
@@ -100,8 +108,8 @@ export default function Home() {
        document.documentElement.classList.remove('dark');
     }
     toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
+      title: "Logged Out & Data Reset",
+      description: "You have been logged out and user data has been cleared.",
     });
      // Redirect to login page might be better UX
      router.push('/login');
@@ -342,3 +350,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
