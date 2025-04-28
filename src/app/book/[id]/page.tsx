@@ -146,6 +146,18 @@ export default function BookDetailPage() {
    // State for the displayed like count, initialized with mock data
   const [displayedLikeCount, setDisplayedLikeCount] = React.useState(initialMockLikeCount);
 
+   // Mock comment count (can be made deterministic like others if needed)
+   const mockCommentCount = React.useMemo(() => {
+       if (!bookId) return 5;
+       let hash = 0;
+       for (let i = 0; i < bookId.length; i++) {
+           const char = bookId.charCodeAt(i);
+           hash = ((hash << 5) - hash) + char + 2; // Different hash again
+           hash |= 0;
+       }
+       return Math.abs(hash % 50) + 5; // Between 5 and 54 comments
+   }, [bookId]);
+
   // Update displayed count when initial count changes (e.g., bookId changes)
   React.useEffect(() => {
     setDisplayedLikeCount(initialMockLikeCount);
@@ -346,6 +358,7 @@ export default function BookDetailPage() {
         // This would typically involve sending the comment to a backend/database
         toast({ title: "Comment Added", description: "Your comment has been posted (simulation)." });
         setComment(''); // Clear comment input after submission
+        // Ideally, you would also update the mockCommentCount or refetch comments here
     };
 
     // Handle Like Button Click
@@ -363,6 +376,15 @@ export default function BookDetailPage() {
             description: `You've ${newLikedState ? 'liked' : 'unliked'} ${book?.title}.`,
         });
     };
+
+    // Handle Comment Icon Click - Scroll to comments section
+    const handleCommentIconClick = () => {
+        const commentsSection = document.getElementById('comments-section');
+        if (commentsSection) {
+           commentsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
 
   // --- Rendering ---
   if (loading) {
@@ -512,10 +534,18 @@ export default function BookDetailPage() {
                              <Heart className={cn("mr-1.5 h-4 w-4 transition-colors", isLiked && "fill-current")} />
                              <span>{displayedLikeCount.toLocaleString()}</span> {/* Use displayed count */}
                          </Button>
-                          <div className="flex items-center" title={`View Comments`}>
+                         {/* Interactive Comment Icon Button */}
+                          <Button
+                              variant="ghost"
+                              size="sm"
+                              className="flex items-center px-2 py-1 -ml-2 text-muted-foreground hover:text-primary" // Adjust padding/margin
+                              onClick={handleCommentIconClick}
+                              title={`View ${mockCommentCount} Comments`}
+                              aria-label={`View ${mockCommentCount} comments`}
+                          >
                               <MessageSquare className="mr-1.5 h-4 w-4" />
-                               <span>{/* TODO: Implement actual comment count */}</span>
-                          </div>
+                              <span>{mockCommentCount.toLocaleString()}</span>
+                          </Button>
                      </div>
 
 
@@ -558,10 +588,10 @@ export default function BookDetailPage() {
         </Card>
 
         {/* Comments Section Card */}
-        <Card className="shadow-lg">
+        <Card id="comments-section" className="shadow-lg"> {/* Added ID here */}
            <CardHeader>
               <CardTitle className="flex items-center">
-                 <MessageSquare className="mr-2 h-5 w-5 text-primary"/> Comments
+                 <MessageSquare className="mr-2 h-5 w-5 text-primary"/> Comments ({mockCommentCount}) {/* Show count in title */}
               </CardTitle>
               <CardDescription>Share your thoughts or read what others are saying.</CardDescription>
            </CardHeader>
@@ -622,5 +652,3 @@ export default function BookDetailPage() {
     </div>
   );
 }
-
-    
