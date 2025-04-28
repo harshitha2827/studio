@@ -176,7 +176,7 @@ export default function BookDetailPage() {
     } else {
         setLoading(false); // No ID, stop loading
     }
-  }, [bookId, toast]); // Rerun when bookId changes
+  }, [bookId]); // Rerun when bookId changes
 
    // --- Actions ---
    const updateBookInStorage = (updatedBook: Book) => {
@@ -235,6 +235,9 @@ export default function BookDetailPage() {
    const handleStatusChange = (newStatus: ReadingStatus) => {
      if (!book) return;
 
+     // Determine if it's a blank PDF book
+     const isBlankPdfBook = !book.coverUrl && book.blankPdfUrl;
+
      // Optimistically update UI state
      setCurrentStatus(newStatus);
      const newRating = newStatus === 'finished' ? currentRating : undefined; // Reset rating if not finished
@@ -254,10 +257,20 @@ export default function BookDetailPage() {
      // Persist change to localStorage
      updateBookInStorage(updatedBookData);
 
+     // Show toast notification
      toast({
        title: `Book marked as '${newStatus.replace('-', ' ')}'`,
        description: `${book.title} status updated.`,
      });
+
+     // If setting to 'reading' and it's a blank PDF book, open the PDF
+     if (newStatus === 'reading' && isBlankPdfBook && updatedBookData.blankPdfUrl) {
+         window.open(updatedBookData.blankPdfUrl, '_blank', 'noopener,noreferrer');
+         toast({ // Optional secondary toast
+             title: "Opening PDF...",
+             description: `Opening the document for ${book.title}.`,
+         });
+     }
    };
 
    const handleRatingChange = (newRating: number) => {
@@ -478,8 +491,9 @@ export default function BookDetailPage() {
                     <div>
                         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Manage Status</h3>
                         <div className="flex flex-wrap gap-2">
+                           {/* Changed label for 'Reading' button */}
                           <Button variant={displayStatus === 'reading' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('reading')}>
-                             <BookOpen className="mr-2 h-4 w-4" /> Reading
+                              <BookOpen className="mr-2 h-4 w-4" /> {isBlankPdfBook ? 'Read Now' : 'Reading'}
                           </Button>
                            <Button variant={displayStatus === 'finished' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('finished')}>
                              <CheckCircle className="mr-2 h-4 w-4" /> Finished
@@ -565,3 +579,4 @@ export default function BookDetailPage() {
     </div>
   );
 }
+
