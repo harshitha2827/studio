@@ -37,6 +37,7 @@ import {
 import { StarRating } from "./star-rating";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 
 // --- !!! IMPORTANT: Replace this placeholder URL !!! ---
 // This default URL will be used if a book being edited doesn't already have one.
@@ -150,137 +151,141 @@ export function AddBookForm({ onBookSave, initialBook, isOpen, setIsOpen }: AddB
       )}
       {/* The Edit button on the card triggers the dialog via parent state */}
 
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[480px] max-h-[90vh] flex flex-col"> {/* Added max-h and flex */}
         <DialogHeader>
           <DialogTitle>{initialBook ? "Edit Book" : "Add New Book"}</DialogTitle>
           <DialogDescription>
             {initialBook ? "Update the details for this book." : "Enter the details for the new book you want to add."}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., The Great Gatsby" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="author"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Author</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., F. Scott Fitzgerald" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="coverUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cover Image URL (Optional)</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://example.com/cover.jpg" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="isbn"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ISBN (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 978-3-16-148410-0" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select reading status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="reading">Reading</SelectItem>
-                      <SelectItem value="finished">Finished</SelectItem>
-                      <SelectItem value="want-to-read">Want to Read</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Conditionally render Rating */}
-            {watchStatus === 'finished' && (
+        {/* Wrap form content in ScrollArea */}
+        <ScrollArea className="flex-1 overflow-y-auto pr-6"> {/* Added pr-6 for scrollbar space */}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="rating"
+                name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rating (Optional)</FormLabel>
+                    <FormLabel>Title</FormLabel>
                     <FormControl>
-                      {/* Pass field.value and field.onChange directly */}
-                      <StarRating rating={field.value ?? 0} onRatingChange={field.onChange} />
+                      <Input placeholder="e.g., The Great Gatsby" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
+              <FormField
+                control={form.control}
+                name="author"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Author</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., F. Scott Fitzgerald" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="coverUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cover Image URL (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="url" placeholder="https://example.com/cover.jpg" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isbn"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ISBN (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 978-3-16-148410-0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select reading status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="reading">Reading</SelectItem>
+                        <SelectItem value="finished">Finished</SelectItem>
+                        <SelectItem value="want-to-read">Want to Read</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes/Review (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Your thoughts on the book..."
-                      className="resize-none"
-                      rows={4}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              {/* Conditionally render Rating */}
+              {watchStatus === 'finished' && (
+                <FormField
+                  control={form.control}
+                  name="rating"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rating (Optional)</FormLabel>
+                      <FormControl>
+                        {/* Pass field.value and field.onChange directly */}
+                        <StarRating rating={field.value ?? 0} onRatingChange={field.onChange} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
-            <DialogFooter>
-              {/* DialogClose now implicitly calls onOpenChange(false) */}
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button type="submit">{initialBook ? "Save Changes" : "Add Book"}</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes/Review (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your thoughts on the book..."
+                        className="resize-none"
+                        rows={4}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* Footer is outside the form but needs access to submit */}
+              <DialogFooter className="mt-auto pt-4 border-t sticky bottom-0 bg-background z-10"> {/* Made footer sticky */}
+                {/* DialogClose now implicitly calls onOpenChange(false) */}
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit">{initialBook ? "Save Changes" : "Add Book"}</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
