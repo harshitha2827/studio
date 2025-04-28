@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -6,10 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookCard } from "./book-card";
 import { AddBookForm } from "./add-book-form";
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"; // Removed AlertDialogTrigger as it's handled implicitly
 import { getCookie, setCookie } from "@/lib/cookies"; // Import cookie utils
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { DialogTrigger } from "@/components/ui/dialog"; // Need DialogTrigger for the hidden edit trigger
 
 
 const BOOKSHELF_TAB_COOKIE = "bookshelf_last_tab";
@@ -19,7 +21,19 @@ export function Bookshelf() {
      // Load books from localStorage on initial render
      if (typeof window !== 'undefined') {
         const savedBooks = localStorage.getItem('bookshelfBooks');
-        return savedBooks ? JSON.parse(savedBooks) : [];
+        // Ensure date strings are parsed back into Date objects
+        if (savedBooks) {
+          try {
+            const parsedBooks = JSON.parse(savedBooks);
+            return parsedBooks.map((book: any) => ({
+              ...book,
+              addedDate: new Date(book.addedDate), // Convert string back to Date
+            }));
+          } catch (e) {
+            console.error("Failed to parse books from localStorage:", e);
+            return [];
+          }
+        }
      }
      return [];
   });
@@ -40,7 +54,12 @@ export function Bookshelf() {
   // Save books to localStorage whenever the books state changes
   React.useEffect(() => {
      if (typeof window !== 'undefined') {
-      localStorage.setItem('bookshelfBooks', JSON.stringify(books));
+      // Ensure dates are stored as strings (ISO format is standard)
+      const booksToSave = books.map(book => ({
+        ...book,
+        addedDate: book.addedDate.toISOString(),
+      }));
+      localStorage.setItem('bookshelfBooks', JSON.stringify(booksToSave));
      }
   }, [books]);
 
@@ -59,7 +78,7 @@ export function Bookshelf() {
         // Update existing book
         const updatedBooks = [...prevBooks];
         updatedBooks[existingIndex] = book;
-        return updatedBooks;
+        return updatedBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Maintain sort on update
       } else {
         // Add new book
         return [...prevBooks, book].sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Keep sorted by added date desc
@@ -70,20 +89,13 @@ export function Bookshelf() {
 
   const handleEdit = (book: Book) => {
     setEditingBook(book);
-    // We need a way to trigger the dialog open state here.
-    // A simple way is to manage the AddBookForm's open state externally,
-    // but for simplicity, we'll let the user click the (now hidden) trigger again.
-    // A better approach would involve controlling the Dialog's open prop from Bookshelf.
-    // For now, find the button and click it programmatically (or use state).
+     // Find the hidden trigger button and click it programmatically
      const triggerButton = document.getElementById(`edit-trigger-${book.id}`);
      if (triggerButton) {
        triggerButton.click();
      } else {
-         // Fallback if direct trigger manipulation isn't feasible/desired
-         // We need to ensure the AddBookForm dialog opens when edit is clicked.
-         // This might require lifting state up or using a ref.
          console.warn("Could not find trigger button for editing.");
-         // As a temporary measure, maybe just open the dialog directly if we manage its state here.
+         // Potentially add state management for the AddBookForm dialog visibility here
      }
   };
 
@@ -128,11 +140,12 @@ export function Bookshelf() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+       {/* Header Row: Title and Add Button */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold text-primary">My Bookshelf</h1>
-         {/* Pass editingBook to AddBookForm */}
+         {/* Pass editingBook to AddBookForm. The AddBookForm component itself contains the DialogTrigger */}
          <AddBookForm onBookSave={handleBookSave} initialBook={editingBook} />
-         {/* Hidden trigger for editing */}
+         {/* Hidden trigger for editing, needs AddBookForm to be openable */}
          {editingBook && (
             <DialogTrigger asChild id={`edit-trigger-${editingBook.id}`} style={{ display: 'none' }}>
                  <button>Hidden Edit Trigger</button>
@@ -140,27 +153,32 @@ export function Bookshelf() {
          )}
       </div>
 
-       <div className="mb-6 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search by title or author..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full sm:w-64"
-          />
-        </div>
+        {/* Controls Row: Search and Tabs */}
+       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReadingStatus)} className="w-full">
+         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-auto sm:flex-grow sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by title or author..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full"
+              />
+            </div>
+             {/* Tabs List */}
+            <TabsList className="grid grid-cols-3 sm:inline-flex sm:w-auto w-full">
+              {statuses.map((status) => (
+                <TabsTrigger key={status} value={status} className="capitalize w-full sm:w-auto">
+                  {status.replace('-', ' ')} ({filteredBooks(status).length})
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReadingStatus)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          {statuses.map((status) => (
-            <TabsTrigger key={status} value={status} className="capitalize">
-              {status.replace('-', ' ')} ({filteredBooks(status).length})
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
+        {/* Tab Content Area */}
         {statuses.map((status) => (
           <TabsContent key={status} value={status}>
             {filteredBooks(status).length > 0 ? (

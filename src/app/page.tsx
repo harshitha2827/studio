@@ -25,7 +25,8 @@ type UserProfile = {
 
 export default function Home() {
   // Simulate authentication state - replace with actual auth logic later
-  const [isLoggedIn, setIsLoggedIn] = React.useState(true); // Set to true for demonstration
+  // For demo, assume user is logged in. In a real app, this would come from context/auth state.
+  const [isLoggedIn, setIsLoggedIn] = React.useState(true);
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
   const { toast } = useToast();
 
@@ -36,14 +37,15 @@ export default function Home() {
        if (storedData) {
             try {
                 // Parse data, which might include avatarUrl as data URI
-                const parsed: { name?: string; avatarUrl?: string } = JSON.parse(storedData);
-                setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl });
+                const parsed: { name?: string; avatarUrl?: string; dob?: string } = JSON.parse(storedData);
+                 // Use parsed data. Ensure avatarUrl exists.
+                setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl || '' });
             } catch (e) {
                  console.error("Failed to parse user profile from localStorage", e);
                  setUserProfile({ name: 'User', avatarUrl: '' }); // Fallback
             }
        } else {
-            // Default if no profile exists yet
+            // Default if no profile exists yet but user is logged in
             setUserProfile({ name: 'User', avatarUrl: '' });
        }
     } else {
@@ -56,35 +58,41 @@ export default function Home() {
     setUserProfile(null); // Clear profile state
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userProfile'); // Clear stored profile on logout
+      // Optionally clear bookshelf data too, or keep it associated with the device
+      // localStorage.removeItem('bookshelfBooks');
     }
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out.",
     });
+     // Redirect to login page might be desired here
+     // router.push('/login'); // Requires importing and using useRouter
   };
 
    // Generate initials for Avatar fallback
    const getInitials = (name: string | undefined): string => {
     if (!name) return 'U'; // Default to 'U' if no name
-    const names = name.split(' ');
+    const names = name.trim().split(' ');
+    if (names.length === 1 && names[0].length > 0) return names[0][0].toUpperCase(); // Handle single name
     return names
+      .filter(n => n.length > 0) // Ensure non-empty strings
       .map((n) => n[0])
-      .slice(0, 2) // Take first letter of first two names
+      .slice(0, 2) // Take first letter of first two names/parts
       .join('')
       .toUpperCase();
    };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b bg-background">
+      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
           {/* App Title */}
           <div className="flex gap-6 md:gap-10">
              <Link href="/" className="flex items-center space-x-2">
+               {/* Simple SVG Book Icon */}
                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
-                 <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                 <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v16H6.5a2.5 2.5 0 0 1 0-5H20"></path>
                </svg>
                <span className="inline-block font-bold">BookShelfie</span>
              </Link>
@@ -96,8 +104,8 @@ export default function Home() {
               {isLoggedIn && userProfile ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                       <Avatar className="h-8 w-8">
+                    <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                       <Avatar className="h-9 w-9 border">
                           {/* AvatarImage src can handle both URLs and data URIs */}
                           <AvatarImage src={userProfile.avatarUrl || undefined} alt={userProfile.name || 'User Profile'} />
                           <AvatarFallback>
@@ -109,18 +117,18 @@ export default function Home() {
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>{userProfile.name || 'My Account'}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild className="cursor-pointer">
                       <Link href="/profile"> {/* Link to the profile page */}
                         <User className="mr-2 h-4 w-4" />
                         <span>Profile Details</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled> {/* Disabled for now */}
+                    <DropdownMenuItem disabled className="cursor-not-allowed"> {/* Disabled for now */}
                       <History className="mr-2 h-4 w-4" />
                       <span>Reading History</span>
                        {/* Later: Link href="/history" */}
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled> {/* Disabled for now */}
+                    <DropdownMenuItem disabled className="cursor-not-allowed"> {/* Disabled for now */}
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                       {/* Later: Link href="/settings" */}
@@ -142,12 +150,20 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main content area */}
+      {/* Main content area - Bookshelf component handles its own internal layout */}
       <main className="flex-1">
-        <div className="container mx-auto px-4 py-8 md:px-8 lg:px-12">
-           <Bookshelf />
-        </div>
+        {/* Container removed from here, as Bookshelf has its own container */}
+         <Bookshelf />
       </main>
+
+        {/* Optional Footer */}
+        {/*
+        <footer className="mt-auto border-t bg-muted/40 py-4">
+          <div className="container text-center text-sm text-muted-foreground">
+             BookShelfie © {new Date().getFullYear()}
+          </div>
+        </footer>
+         */}
     </div>
   );
 }
