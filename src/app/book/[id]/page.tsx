@@ -4,6 +4,7 @@
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link'; // Import Link
 import type { Book, ReadingStatus } from '@/interfaces/book';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,18 +12,14 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label'; // Import Label
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, ThumbsUp, MessageSquare, Share2 } from 'lucide-react'; // Removed Star as StarRating handles it
+import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, ThumbsUp, MessageSquare, Share2, ExternalLink } from 'lucide-react'; // Added ExternalLink
 import { useToast } from '@/hooks/use-toast';
 import { generateSampleBooks } from '@/lib/mock-data'; // For finding book by ID in mock data
 import { StarRating } from '@/components/star-rating'; // Import StarRating
 
 // Helper to find a book by ID from a sample list (replace with actual data fetching)
-// Ensures the book displayed matches the one clicked from a category/home page
 const findBookById = (id: string): Book | undefined => {
-  // In a real app, fetch from API/DB using the 'id'.
-  // We use a large, deterministically generated pool based on a consistent seed
-  // to maximize the chance of finding the clicked book's ID.
-  const allSampleBooks = generateSampleBooks(500, 'bookDetail'); // Use a consistent seed for the detail page context
+  const allSampleBooks = generateSampleBooks(500, 'bookDetail'); // Use a consistent seed
   return allSampleBooks.find(book => book.id === id);
 };
 
@@ -41,7 +38,6 @@ export default function BookDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  // Extract book ID from URL parameters
   const bookId = typeof params.id === 'string' ? params.id : '';
 
   // --- State Management ---
@@ -49,24 +45,24 @@ export default function BookDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [currentStatus, setCurrentStatus] = React.useState<ReadingStatus | undefined>(undefined);
   const [currentRating, setCurrentRating] = React.useState<number>(0);
-  const [comment, setComment] = React.useState(''); // State for the comment input
+  const [comment, setComment] = React.useState('');
 
-  // Mocked engagement data - generated based on bookId for consistency per page load
+  // --- Mock Data Generation (Consistent per book) ---
   const mockReaderCount = React.useMemo(() => {
-      if (!bookId) return 100; // Default if no bookId yet
+      if (!bookId) return 100;
       return Math.floor(pseudoRandom(bookId.hashCode()) * 5000) + 100;
   }, [bookId]);
   const mockLikeCount = React.useMemo(() => {
-      if (!bookId) return 20; // Default if no bookId yet
+      if (!bookId) return 20;
        return Math.floor(mockReaderCount * (pseudoRandom(bookId.hashCode() + 1) * 0.5 + 0.2));
   }, [mockReaderCount, bookId]);
 
-  // Simple hash function for pseudo-random generation based on string ID
+  // Simple hash function for pseudo-random generation
   function pseudoRandom(seed: number): number {
       let x = Math.sin(seed) * 10000;
       return x - Math.floor(x);
   }
-  // Extend string prototype for hashCode (simple implementation) - Ensure it's declared safely
+  // Ensure String.prototype.hashCode is defined globally
   if (typeof String.prototype.hashCode === 'undefined') {
       String.prototype.hashCode = function() {
         var hash = 0, i, chr;
@@ -74,14 +70,13 @@ export default function BookDetailPage() {
         for (i = 0; i < this.length; i++) {
           chr   = this.charCodeAt(i);
           hash  = ((hash << 5) - hash) + chr;
-          hash |= 0; // Convert to 32bit integer
+          hash |= 0;
         }
         return hash;
       };
   }
 
-
-  // Effect to "fetch" book data when bookId changes
+  // --- Effects ---
   React.useEffect(() => {
     if (bookId) {
       setLoading(true);
@@ -89,13 +84,13 @@ export default function BookDetailPage() {
       setBook(null);
       setCurrentStatus(undefined);
       setCurrentRating(0);
-      setComment(''); // Reset comment field
+      setComment('');
 
-      // Simulate fetching the book data using the ID
+      // Simulate fetching book data
       const foundBook = findBookById(bookId);
       if (foundBook) {
         setBook(foundBook);
-        // Check localStorage for existing status/rating for THIS user
+        // Load user-specific status/rating from localStorage
         if (typeof window !== 'undefined') {
             const savedBooksRaw = localStorage.getItem('bookshelfBooks');
             if (savedBooksRaw) {
@@ -108,45 +103,36 @@ export default function BookDetailPage() {
                     setCurrentStatus(userBookData?.status ?? foundBook.status);
                     setCurrentRating(userBookData?.rating ?? foundBook.rating ?? 0);
                 } catch (e) {
-                     console.error("Failed to parse books from localStorage for initial state:", e);
-                     // Fallback to the base book data if localStorage fails
+                     console.error("Failed to parse books from localStorage:", e);
                      setCurrentStatus(foundBook.status);
                      setCurrentRating(foundBook.rating ?? 0);
                 }
             } else {
-                 // If no local storage, use the base data from the found book
                  setCurrentStatus(foundBook.status);
                  setCurrentRating(foundBook.rating ?? 0);
             }
         } else {
-            // Fallback for SSR or environments without localStorage
             setCurrentStatus(foundBook.status);
             setCurrentRating(foundBook.rating ?? 0);
         }
-
       } else {
-        // Handle case where the book ID is not found
         toast({
           title: "Book Not Found",
           description: "Could not find the requested book.",
           variant: "destructive",
         });
-        // Optionally redirect or show a 'not found' state
-        // router.push('/');
       }
       setLoading(false);
     }
-  }, [bookId, toast]); // Re-run effect if bookId changes
+  }, [bookId, toast]);
 
    // --- Actions ---
-   // Function to update the book's data in localStorage
    const updateBookInStorage = (updatedBook: Book) => {
      if (typeof window !== 'undefined') {
         const savedBooksRaw = localStorage.getItem('bookshelfBooks');
         let books: Book[] = [];
         if (savedBooksRaw) {
            try {
-                // Ensure dates are parsed correctly when reading from storage
                 books = JSON.parse(savedBooksRaw).map((b: any) => ({
                     ...b,
                     addedDate: new Date(b.addedDate),
@@ -154,67 +140,61 @@ export default function BookDetailPage() {
            } catch (e) {
                console.error("Failed to parse books from localStorage for update:", e);
                toast({ title: "Error", description: "Could not save book changes.", variant: "destructive" });
-               return; // Exit if parsing fails
+               return;
            }
         }
 
         const existingIndex = books.findIndex(b => b.id === updatedBook.id);
         if (existingIndex > -1) {
-            // Update existing book, preserving original addedDate
              const preservedAddedDate = books[existingIndex].addedDate;
-             books[existingIndex] = { ...updatedBook, addedDate: preservedAddedDate };
+             // Preserve the blankPdfUrl from the original record if it exists
+             const preservedPdfUrl = books[existingIndex].blankPdfUrl;
+             books[existingIndex] = {
+                ...updatedBook,
+                addedDate: preservedAddedDate,
+                blankPdfUrl: updatedBook.blankPdfUrl ?? preservedPdfUrl // Ensure it's preserved
+             };
         } else {
-             // Add as a new book if it wasn't found (e.g., user adds it directly from detail page)
-             // Use current date as addedDate ONLY if adding new
-             books.push({ ...updatedBook, addedDate: new Date() });
+             // Add as a new book, potentially with a default blankPdfUrl
+             books.push({
+                ...updatedBook,
+                addedDate: new Date(),
+                // Use the URL from the new book data, or the placeholder if missing
+                blankPdfUrl: updatedBook.blankPdfUrl || "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token" // Add default here too
+            });
         }
 
-        // Ensure dates are stored as ISO strings for reliable serialization
         const booksToSave = books.map(b => ({
            ...b,
-           // Ensure addedDate is valid before calling toISOString
            addedDate: b.addedDate instanceof Date && !isNaN(b.addedDate.getTime())
                       ? b.addedDate.toISOString()
-                      : new Date().toISOString(), // Fallback to now if invalid
+                      : new Date().toISOString(),
+           // Ensure blankPdfUrl is included in the saved data
+           blankPdfUrl: b.blankPdfUrl || undefined, // Store undefined if empty string or null
         }));
         localStorage.setItem('bookshelfBooks', JSON.stringify(booksToSave));
      }
    };
 
-   // Handle changing the book's reading status
    const handleStatusChange = (newStatus: ReadingStatus) => {
      if (!book) return;
-
-     setCurrentStatus(newStatus); // Update local UI state immediately
-
-     // Determine rating based on new status
+     setCurrentStatus(newStatus);
      const newRating = newStatus === 'finished' ? currentRating : undefined;
-
-     // Create the updated book data object
      const updatedBookData: Book = {
-       ...book, // Base data from the found book
-       status: newStatus, // The new status
-       rating: newRating, // Update rating based on status
-       // Add notes if they exist in the current book state, otherwise keep notes from original fetch or undefined
-       notes: book.notes,
-       // Preserve other fetched details
-       coverUrl: book.coverUrl,
-       isbn: book.isbn,
-       pageCount: book.pageCount,
-       authorBio: book.authorBio,
-       addedDate: book.addedDate, // Preserve original added date unless adding new
+       ...book,
+       status: newStatus,
+       rating: newRating,
+       // Preserve existing blankPdfUrl
+       blankPdfUrl: book.blankPdfUrl,
      };
-
-     setBook(prevBook => ({ ...prevBook!, status: newStatus, rating: newRating })); // Update the main book state for UI consistency
-     updateBookInStorage(updatedBookData); // Save the changes to localStorage
-
+     setBook(prevBook => ({ ...prevBook!, status: newStatus, rating: newRating }));
+     updateBookInStorage(updatedBookData);
      toast({
        title: `Book marked as '${newStatus.replace('-', ' ')}'`,
        description: `${book.title} status updated.`,
      });
    };
 
-   // Handle changing the book's rating (only applicable if 'finished')
    const handleRatingChange = (newRating: number) => {
      if (!book || currentStatus !== 'finished') {
          toast({
@@ -224,88 +204,56 @@ export default function BookDetailPage() {
          });
          return;
      }
-
-     setCurrentRating(newRating); // Update local rating state for UI
-
-     // Create updated book data object
+     setCurrentRating(newRating);
      const updatedBookData: Book = {
-       ...book, // Base data
-       status: currentStatus, // Keep current status ('finished')
-       rating: newRating, // Apply the new rating
-       // Preserve other details
-       notes: book.notes,
-       coverUrl: book.coverUrl,
-       isbn: book.isbn,
-       pageCount: book.pageCount,
-       authorBio: book.authorBio,
-       addedDate: book.addedDate,
+       ...book,
+       status: currentStatus,
+       rating: newRating,
+       // Preserve existing blankPdfUrl
+       blankPdfUrl: book.blankPdfUrl,
      };
-
-     setBook(prevBook => ({ ...prevBook!, rating: newRating })); // Update main book state
-     updateBookInStorage(updatedBookData); // Save changes to localStorage
-
+     setBook(prevBook => ({ ...prevBook!, rating: newRating }));
+     updateBookInStorage(updatedBookData);
      toast({
        title: `Rated ${newRating} stars`,
        description: `Your rating for ${book.title} has been saved.`,
      });
    };
 
-   // Handle sharing the book (simulated)
    const handleShare = () => {
       if (!book) return;
-      const shareUrl = window.location.href; // Get the current page URL
+      const shareUrl = window.location.href;
       if (navigator.share) {
-         navigator.share({
-             title: book.title,
-             text: `Check out this book: ${book.title} by ${book.author}`,
-             url: shareUrl,
-         })
+         navigator.share({ title: book.title, text: `Check out this book: ${book.title} by ${book.author}`, url: shareUrl })
          .then(() => toast({ title: "Shared Successfully!" }))
          .catch((error) => console.error('Error sharing:', error));
       } else {
-          // Fallback for browsers that don't support navigator.share
           navigator.clipboard.writeText(shareUrl).then(() => {
-              toast({
-                  title: "Link Copied!",
-                  description: "Book link copied to clipboard.",
-              });
+              toast({ title: "Link Copied!", description: "Book link copied to clipboard." });
           }).catch(err => {
-               toast({
-                    title: "Failed to Copy",
-                    description: "Could not copy link to clipboard.",
-                    variant: "destructive"
-                });
-                console.error('Failed to copy: ', err);
+               toast({ title: "Failed to Copy", description: "Could not copy link to clipboard.", variant: "destructive" });
+               console.error('Failed to copy: ', err);
           });
       }
    };
 
-    // Handle comment submission (simulated)
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!comment.trim()) return;
-        // In a real app, submit the comment to backend API associated with the bookId
         console.log(`Submitting comment for book ${bookId}: ${comment}`);
-        toast({
-            title: "Comment Added",
-            description: "Your comment has been posted (simulation).",
-        });
-        setComment(''); // Clear comment box after submission
-        // Potentially refetch comments here
+        toast({ title: "Comment Added", description: "Your comment has been posted (simulation)." });
+        setComment('');
     };
 
   // --- Rendering ---
-  // Display loading state
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <p className="text-lg text-muted-foreground">Loading book details...</p>
-        {/* TODO: Implement a Skeleton Loader component here for better UX */}
       </div>
     );
   }
 
-  // Display 'not found' state if the book couldn't be loaded
   if (!book) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -313,17 +261,15 @@ export default function BookDetailPage() {
              <ArrowLeft className="mr-2 h-4 w-4" /> Back
          </Button>
         <p className="text-center text-lg text-muted-foreground">Book not found.</p>
-        <p className="text-sm text-muted-foreground mt-2">The book ID might be invalid or the book doesn't exist.</p>
       </div>
     );
   }
 
-  // Determine the current status to display, preferring the user's specific status if available
   const displayStatus = currentStatus ?? book.status;
+  const isBlankPdfBook = !book.coverUrl && book.blankPdfUrl;
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
-      {/* Header with Back Button and Book Title */}
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
          <div className="container flex h-16 items-center">
              <Button variant="ghost" size="sm" onClick={() => router.back()} aria-label="Go back">
@@ -333,23 +279,26 @@ export default function BookDetailPage() {
          </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="container mx-auto max-w-4xl flex-1 px-4 py-8">
-        {/* Book Information Card */}
         <Card className="mb-8 overflow-hidden shadow-lg">
-           <div className="grid gap-0 md:grid-cols-3"> {/* Use grid for layout */}
-              {/* Left Column: Cover Image */}
+           <div className="grid gap-0 md:grid-cols-3">
+              {/* Left Column: Cover Image or PDF Placeholder */}
               <div className="flex items-center justify-center bg-muted p-6 md:col-span-1 md:p-8">
                 <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded shadow-md">
-                   <Image
-                       // Use a default placeholder if coverUrl is missing
-                       src={book.coverUrl || `https://picsum.photos/seed/${book.id}/300/400`}
-                       alt={`${book.title} cover`}
-                       fill
-                       sizes="(max-width: 768px) 80vw, 30vw" // Responsive image sizes
-                       className="object-cover"
-                       priority // Prioritize loading the main book cover
-                    />
+                    {isBlankPdfBook ? (
+                        <div className="flex h-full w-full items-center justify-center bg-muted">
+                           <FileText className="h-1/2 w-1/2 text-muted-foreground opacity-50" />
+                        </div>
+                    ) : (
+                       <Image
+                           src={book.coverUrl || `https://picsum.photos/seed/${book.id}/300/400`}
+                           alt={`${book.title} cover`}
+                           fill
+                           sizes="(max-width: 768px) 80vw, 30vw"
+                           className="object-cover"
+                           priority
+                        />
+                    )}
                 </div>
               </div>
 
@@ -358,15 +307,23 @@ export default function BookDetailPage() {
                  <CardHeader className="p-6 md:p-8">
                    <CardTitle className="text-2xl font-bold md:text-3xl">{book.title}</CardTitle>
                    <CardDescription className="text-lg text-muted-foreground">by {book.author}</CardDescription>
-                   {/* Additional meta info */}
                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                        {book.pageCount && <span>{book.pageCount} pages</span>}
                        {book.isbn && <span>ISBN: {book.isbn}</span>}
                    </div>
+                   {/* Link to Blank PDF if applicable */}
+                    {isBlankPdfBook && book.blankPdfUrl && (
+                       <Button variant="outline" size="sm" asChild className="mt-4">
+                          <Link href={book.blankPdfUrl} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Open Blank PDF
+                          </Link>
+                       </Button>
+                    )}
                  </CardHeader>
 
                  <CardContent className="flex-grow space-y-6 p-6 pt-0 md:p-8 md:pt-0">
-                    {/* User Rating (Only interactive if status is 'finished') */}
+                    {/* User Rating */}
                     {displayStatus === 'finished' && (
                       <div>
                         <h3 className="mb-2 font-semibold text-foreground">My Rating</h3>
@@ -374,12 +331,11 @@ export default function BookDetailPage() {
                             rating={currentRating}
                             onRatingChange={handleRatingChange}
                             size={24}
-                            readOnly={displayStatus !== 'finished'} // Make read-only if not finished
+                            readOnly={displayStatus !== 'finished'}
                         />
                          {displayStatus !== 'finished' && <p className="mt-1 text-xs text-muted-foreground">Mark as 'Finished' to rate.</p>}
                       </div>
                     )}
-                     {/* Display read-only stars if finished but not allowing change now */}
                     {displayStatus !== 'finished' && book.rating !== undefined && book.rating > 0 && (
                         <div>
                             <h3 className="mb-2 font-semibold text-foreground">Last Rating</h3>
@@ -387,16 +343,15 @@ export default function BookDetailPage() {
                         </div>
                     )}
 
-
-                    {/* User Notes/Synopsis (If available in the book data) */}
-                   {book.notes && ( // Check if notes exist on the core book object
+                    {/* User Notes */}
+                   {book.notes && (
                       <div>
                          <h3 className="mb-2 font-semibold text-foreground">My Notes</h3>
                          <p className="whitespace-pre-wrap text-sm text-foreground/80">{book.notes}</p>
                       </div>
                     )}
 
-                    {/* Engagement Stats (Simulated) */}
+                    {/* Engagement Stats */}
                     <div className="flex items-center space-x-6 text-sm text-muted-foreground">
                         <div className="flex items-center" title={`${mockReaderCount} Readers`}>
                             <Users className="mr-1.5 h-4 w-4" />
@@ -406,14 +361,13 @@ export default function BookDetailPage() {
                             <ThumbsUp className="mr-1.5 h-4 w-4" />
                              <span>{mockLikeCount.toLocaleString()}</span>
                         </div>
-                        {/* Placeholder for Comment count - Requires fetching actual comments */}
                          <div className="flex items-center" title={`View Comments`}>
                              <MessageSquare className="mr-1.5 h-4 w-4" />
                               <span>{/* TODO: Actual comment count */}</span>
                          </div>
                     </div>
 
-                    {/* Author Bio (If available) */}
+                    {/* Author Bio */}
                     {book.authorBio && (
                        <div>
                            <h3 className="mb-2 font-semibold text-foreground">About the Author</h3>
@@ -424,7 +378,7 @@ export default function BookDetailPage() {
 
                  {/* Actions Footer */}
                  <div className="mt-auto space-y-4 border-t bg-muted/50 p-4 md:p-6">
-                    {/* Status Management Buttons */}
+                    {/* Status Management */}
                     <div>
                         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Manage Status</h3>
                         <div className="flex flex-wrap gap-2">
@@ -439,7 +393,7 @@ export default function BookDetailPage() {
                           </Button>
                         </div>
                     </div>
-                     {/* Share Button */}
+                    {/* Share Button */}
                     <div>
                          <Button variant="outline" size="sm" onClick={handleShare} className="w-full sm:w-auto">
                              <Share2 className="mr-2 h-4 w-4" /> Share
@@ -459,23 +413,20 @@ export default function BookDetailPage() {
               <CardDescription>Share your thoughts or read what others are saying.</CardDescription>
            </CardHeader>
            <CardContent className="space-y-4">
-              {/* Mock Comments List (Replace with actual comment fetching and rendering) */}
+              {/* Mock Comments List */}
               <div className="space-y-4">
-                 {/* Example Comment 1 */}
                  <div className="flex items-start space-x-3">
                     <Avatar className="h-8 w-8 border">
-                        {/* Use predictable user image */}
                         <AvatarImage src={`https://i.pravatar.cc/40?u=user1_${bookId}`} alt="User 1" />
                         <AvatarFallback>{getInitials('User One')}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 rounded-md border bg-muted/30 p-3">
                         <p className="text-sm font-medium text-foreground">BookLover123</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Absolutely loved this book! The character development was fantastic.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Absolutely loved this book!</p>
                         <p className="mt-1 text-xs text-muted-foreground/70">2 days ago</p>
                     </div>
                  </div>
                  <Separator />
-                  {/* Example Comment 2 */}
                  <div className="flex items-start space-x-3">
                      <Avatar className="h-8 w-8 border">
                         <AvatarImage src={`https://i.pravatar.cc/40?u=user2_${bookId}`} alt="User 2" />
@@ -483,11 +434,10 @@ export default function BookDetailPage() {
                     </Avatar>
                     <div className="flex-1 rounded-md border bg-muted/30 p-3">
                         <p className="text-sm font-medium text-foreground">ReaderDude</p>
-                        <p className="mt-1 text-sm text-muted-foreground">A bit slow in the middle for my taste, but the ending made up for it. Solid read!</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Solid read!</p>
                          <p className="mt-1 text-xs text-muted-foreground/70">1 week ago</p>
                     </div>
                  </div>
-                 {/* TODO: Add more mock comments or a "Load More Comments" button */}
               </div>
 
               <Separator className="my-6"/>
@@ -516,7 +466,6 @@ export default function BookDetailPage() {
 }
 
 // Extend String prototype for simple hashCode if not already present globally
-// This is just for the mock data generation consistency based on ID.
 declare global {
     interface String {
         hashCode(): number;

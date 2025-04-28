@@ -18,6 +18,13 @@ export const generateSampleBooks = (count: number, seedPrefix: string): Book[] =
     return x - Math.floor(x);
   }
 
+   // --- !!! IMPORTANT: Replace this placeholder URL !!! ---
+   // Upload your blank PDF to Firebase Storage and paste the Download URL here.
+   const placeholderBlankPdfUrl = "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token";
+   // If you don't have one yet, you can use a public sample PDF for testing:
+   // const placeholderBlankPdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+
+
   for (let i = 1; i <= count; i++) {
     // Combine prefix and index for a unique seed per book
     const seed = seedPrefix.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
@@ -48,13 +55,25 @@ export const generateSampleBooks = (count: number, seedPrefix: string): Book[] =
       pageCount: pageCount,
       authorBio: `${authorName} is a renowned author known for their captivating stories in the ${seedPrefix.split('-')[0] || 'various'} genre. Born on a deterministically generated date, they enjoy predictable hobbies like reading code.`,
       notes: notes,
+      // Add the placeholder URL to every mock book record
+      blankPdfUrl: placeholderBlankPdfUrl,
     });
   }
   // Sort by ID primarily to ensure stable order during hydration, then by date for display preference
   return books.sort((a, b) => {
-    if (a.id !== b.id) {
-        return a.id.localeCompare(b.id);
+    // Simple string comparison for IDs generated like 'prefix-N'
+    const [prefixA, numA] = a.id.split('-');
+    const [prefixB, numB] = b.id.split('-');
+    if (prefixA !== prefixB) {
+        return prefixA.localeCompare(prefixB);
     }
-    return b.addedDate.getTime() - a.addedDate.getTime(); // Fallback sort by date if IDs were somehow identical
+    const idNumA = parseInt(numA, 10);
+    const idNumB = parseInt(numB, 10);
+    if (idNumA !== idNumB) {
+        return idNumA - idNumB;
+    }
+
+    // Fallback sort by date if IDs were somehow identical or parsing failed
+    return b.addedDate.getTime() - a.addedDate.getTime();
   });
 };

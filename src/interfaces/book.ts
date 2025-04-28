@@ -12,4 +12,5 @@ export interface Book {
   addedDate: Date; // Track when the book was added
   pageCount?: number; // Optional page count
   authorBio?: string; // Optional short author bio
+  blankPdfUrl?: string; // Optional URL to a blank PDF stored in Firebase Storage
 }

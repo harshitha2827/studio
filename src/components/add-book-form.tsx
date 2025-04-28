@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -37,6 +38,13 @@ import { StarRating } from "./star-rating";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle } from "lucide-react";
 
+// --- !!! IMPORTANT: Replace this placeholder URL !!! ---
+// This default URL will be used if a book being edited doesn't already have one.
+// Upload your blank PDF to Firebase Storage and paste the Download URL here.
+const placeholderBlankPdfUrl = "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token";
+// Public sample PDF for testing:
+// const placeholderBlankPdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+
 const bookSchema = z.object({
   title: z.string().min(1, "Title is required"),
   author: z.string().min(1, "Author is required"),
@@ -45,6 +53,8 @@ const bookSchema = z.object({
   notes: z.string().optional(),
   coverUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')), // Optional URL
   isbn: z.string().optional(),
+  // No need to explicitly add blankPdfUrl to the *form schema* as it's not user-editable here.
+  // It will be handled during the save logic.
 });
 
 type BookFormData = z.infer<typeof bookSchema>;
@@ -74,36 +84,46 @@ export function AddBookForm({ onBookSave, initialBook }: AddBookFormProps) {
   const watchStatus = form.watch("status");
 
   React.useEffect(() => {
-    if (initialBook) {
-      form.reset({
-        title: initialBook.title,
-        author: initialBook.author,
-        status: initialBook.status,
-        rating: initialBook.rating ?? 0,
-        notes: initialBook.notes ?? "",
-        coverUrl: initialBook.coverUrl ?? "",
-        isbn: initialBook.isbn ?? "",
-      });
+    // Reset form when dialog opens or initialBook changes
+    if (isOpen) {
+        form.reset({
+          title: initialBook?.title ?? "",
+          author: initialBook?.author ?? "",
+          status: initialBook?.status ?? "want-to-read",
+          rating: initialBook?.rating ?? 0,
+          notes: initialBook?.notes ?? "",
+          coverUrl: initialBook?.coverUrl ?? "",
+          isbn: initialBook?.isbn ?? "",
+        });
     } else {
-       form.reset({ // Reset to default when adding new
-        title: "",
-        author: "",
-        status: "want-to-read",
-        rating: 0,
-        notes: "",
-        coverUrl: "",
-        isbn: "",
-      });
+        // Optionally clear form when closing if not editing
+        if (!initialBook) {
+             form.reset({ // Reset to default when adding new
+                title: "",
+                author: "",
+                status: "want-to-read",
+                rating: 0,
+                notes: "",
+                coverUrl: "",
+                isbn: "",
+              });
+        }
     }
-  }, [initialBook, form, isOpen]); // Depend on isOpen to reset when dialog opens for adding
+  }, [initialBook, form, isOpen]); // Depend on isOpen to reset when dialog opens
 
   const onSubmit = (data: BookFormData) => {
     const bookData: Book = {
-      id: initialBook?.id || Date.now().toString(), // Generate simple ID if new
+      // Use existing ID and addedDate if editing, otherwise generate new ones
+      id: initialBook?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`, // Generate simple ID if new
       addedDate: initialBook?.addedDate || new Date(),
       ...data,
       // Only include rating if status is 'finished'
       rating: data.status === 'finished' ? data.rating : undefined,
+      // Preserve existing blankPdfUrl if editing, otherwise use the placeholder
+      blankPdfUrl: initialBook?.blankPdfUrl || placeholderBlankPdfUrl,
+      // Preserve other potential fields not directly in the form
+      pageCount: initialBook?.pageCount,
+      authorBio: initialBook?.authorBio,
     };
 
     onBookSave(bookData);
@@ -112,7 +132,7 @@ export function AddBookForm({ onBookSave, initialBook }: AddBookFormProps) {
       description: `${data.title} has been successfully ${initialBook ? 'updated' : 'added'}.`,
     });
     setIsOpen(false); // Close dialog on successful save
-    form.reset(); // Reset form fields
+    // Don't reset form here, useEffect handles it based on isOpen and initialBook
   };
 
   return (

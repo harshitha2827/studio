@@ -42,11 +42,25 @@ export function Bookshelf() {
        try {
          const parsedBooks = JSON.parse(savedBooks);
          if (Array.isArray(parsedBooks)) {
-           // Parse dates and sort
+           // Parse dates, ensure blankPdfUrl exists, and sort
            const loadedBooks = parsedBooks.map((book: any) => ({
              ...book,
              addedDate: new Date(book.addedDate), // Ensure date objects
-           })).sort((a: Book, b: Book) => b.addedDate.getTime() - a.addedDate.getTime());
+             blankPdfUrl: book.blankPdfUrl || undefined, // Ensure field exists
+           })).sort((a: Book, b: Book) => {
+                // Use the same sorting logic as mock-data generator
+                const [prefixA, numA] = a.id.split('-');
+                const [prefixB, numB] = b.id.split('-');
+                if (prefixA !== prefixB) {
+                    return prefixA.localeCompare(prefixB);
+                }
+                const idNumA = parseInt(numA, 10);
+                const idNumB = parseInt(numB, 10);
+                if (idNumA !== idNumB) {
+                    return idNumA - idNumB;
+                }
+                return b.addedDate.getTime() - a.addedDate.getTime();
+           });
            setBooks(loadedBooks); // Update state with localStorage data
          }
        } catch (e) {
@@ -55,6 +69,7 @@ export function Bookshelf() {
          const initialBooksToSave = initialBooks.map(book => ({
             ...book,
             addedDate: book.addedDate.toISOString(),
+            blankPdfUrl: book.blankPdfUrl || undefined, // Include blankPdfUrl
          }));
          localStorage.setItem('bookshelfBooks', JSON.stringify(initialBooksToSave));
          setBooks(initialBooks); // Explicitly set state back to initial
@@ -64,6 +79,7 @@ export function Bookshelf() {
         const initialBooksToSave = initialBooks.map(book => ({
             ...book,
             addedDate: book.addedDate.toISOString(),
+            blankPdfUrl: book.blankPdfUrl || undefined, // Include blankPdfUrl
         }));
         localStorage.setItem('bookshelfBooks', JSON.stringify(initialBooksToSave));
         setBooks(initialBooks); // Ensure state is the initial set
@@ -83,6 +99,7 @@ export function Bookshelf() {
       const booksToSave = books.map(book => ({
         ...book,
         addedDate: book.addedDate instanceof Date ? book.addedDate.toISOString() : new Date().toISOString(), // Ensure date is valid ISO string
+        blankPdfUrl: book.blankPdfUrl || undefined, // Ensure blankPdfUrl is saved
       }));
       localStorage.setItem('bookshelfBooks', JSON.stringify(booksToSave));
      }
@@ -103,14 +120,35 @@ export function Bookshelf() {
       if (existingIndex > -1) {
         // Update existing book
         updatedBooks = [...prevBooks];
-        updatedBooks[existingIndex] = { ...book, addedDate: prevBooks[existingIndex].addedDate }; // Keep original addedDate on update
+        // Ensure all fields from the saved book are preserved/updated correctly
+        updatedBooks[existingIndex] = {
+            ...prevBooks[existingIndex], // Start with the old book's data
+            ...book, // Overwrite with the new data from the form
+            addedDate: prevBooks[existingIndex].addedDate, // explicitly keep original addedDate
+            // Ensure blankPdfUrl is carried over correctly
+            blankPdfUrl: book.blankPdfUrl ?? prevBooks[existingIndex].blankPdfUrl,
+        };
       } else {
         // Add new book with current date as addedDate
-        const newBook = { ...book, addedDate: new Date(), id: `${Date.now()}-${Math.random().toString(16).slice(2)}` }; // Ensure new ID
+        const newBook = {
+            ...book,
+            addedDate: new Date(),
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, // Ensure new ID
+             // Use the URL from the new book data or a default if missing
+            blankPdfUrl: book.blankPdfUrl || "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token" // Add default here too
+        };
         updatedBooks = [...prevBooks, newBook];
       }
-       // Always re-sort after adding or updating
-       return updatedBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime());
+       // Always re-sort after adding or updating using the consistent logic
+       return updatedBooks.sort((a,b) => {
+            const [prefixA, numA] = a.id.split('-');
+            const [prefixB, numB] = b.id.split('-');
+            if (prefixA !== prefixB) { return prefixA.localeCompare(prefixB); }
+            const idNumA = parseInt(numA, 10);
+            const idNumB = parseInt(numB, 10);
+            if (idNumA !== idNumB) { return idNumA - idNumB; }
+            return b.addedDate.getTime() - a.addedDate.getTime();
+       });
     });
     setEditingBook(null); // Clear editing state
   };
@@ -161,7 +199,15 @@ export function Bookshelf() {
     books.filter((book) => book.status === status &&
         (book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
          book.author.toLowerCase().includes(searchTerm.toLowerCase()))
-    ).sort((a, b) => b.addedDate.getTime() - a.addedDate.getTime()); // Maintain sort order
+    ).sort((a, b) => { // Maintain sort order
+        const [prefixA, numA] = a.id.split('-');
+        const [prefixB, numB] = b.id.split('-');
+        if (prefixA !== prefixB) { return prefixA.localeCompare(prefixB); }
+        const idNumA = parseInt(numA, 10);
+        const idNumB = parseInt(numB, 10);
+        if (idNumA !== idNumB) { return idNumA - idNumB; }
+        return b.addedDate.getTime() - a.addedDate.getTime();
+    });
 
   const statuses: ReadingStatus[] = ["reading", "finished", "want-to-read"];
 
@@ -178,7 +224,15 @@ export function Bookshelf() {
      initialBooks.filter((book) => book.status === status &&
          (book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           book.author.toLowerCase().includes(searchTerm.toLowerCase()))
-     ).sort((a, b) => b.addedDate.getTime() - a.addedDate.getTime());
+     ).sort((a, b) => { // Use consistent sort order
+          const [prefixA, numA] = a.id.split('-');
+          const [prefixB, numB] = b.id.split('-');
+          if (prefixA !== prefixB) { return prefixA.localeCompare(prefixB); }
+          const idNumA = parseInt(numA, 10);
+          const idNumB = parseInt(numB, 10);
+          if (idNumA !== idNumB) { return idNumA - idNumB; }
+          return b.addedDate.getTime() - a.addedDate.getTime();
+     });
 
    // Determine which set of books to render based on client-side mount
    const booksToRender = (status: ReadingStatus) => isClient ? filteredBooks(status) : initialFilteredBooks(status);
