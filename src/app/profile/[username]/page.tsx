@@ -45,13 +45,17 @@ const findMockUserByUsername = (username: string): MockUserProfile | null => {
       return x - Math.floor(x);
     }
 
+    // **Reset Join Date Logic:** Generate a date ~30 days ago based on the seed
+    const joinDateOffset = Math.floor(pseudoRandom(seed + 10) * 10 + 25); // 25-34 days ago
+    const joinDate = new Date(Date.now() - joinDateOffset * 24 * 60 * 60 * 1000);
+
     return {
         id: `user-${usernameLower}`,
         name: `${firstName} ${lastNameInitial}.`, // Generate a plausible name
         username: username,
         avatarUrl: `https://i.pravatar.cc/150?u=${usernameLower}`, // Consistent avatar
-        bio: `Mock bio for ${firstName}. A dedicated reader on BookBurst. Currently exploring the world of ${['fiction', 'non-fiction', 'fantasy'][Math.floor(pseudoRandom(seed)*3)]}.`,
-        joinDate: new Date(Date.now() - Math.floor(pseudoRandom(seed+1)*365)*24*60*60*1000), // Joined within the last year
+        bio: `Mock bio for ${firstName}. A dedicated reader on BookBurst. Currently exploring the world of ${['fiction', 'non-fiction', 'fantasy'][Math.floor(pseudoRandom(seed+2)*3)]}.`,
+        joinDate: joinDate, // Use the reset join date
     };
 }
 
