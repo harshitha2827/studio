@@ -10,4 +10,6 @@ export interface Book {
   coverUrl?: string; // Optional cover image URL
   isbn?: string; // Optional ISBN
   addedDate: Date; // Track when the book was added
+  pageCount?: number; // Optional page count
+  authorBio?: string; // Optional short author bio
 }
