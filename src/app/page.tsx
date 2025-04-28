@@ -103,11 +103,21 @@ export default function Home() {
    const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!searchTerm.trim()) return;
-        // In a real app, navigate to a search results page or filter current view
-        toast({
-            title: "Search Submitted",
-            description: `Searching for: ${searchTerm} (functionality not implemented)`,
-        });
+        // Navigate to search results page with the query parameter
+        router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+   };
+
+   // Handle search icon click on mobile
+   const handleMobileSearchClick = () => {
+     if (!searchTerm.trim()) {
+       // Optionally prompt user to enter search term
+       toast({
+         title: "Enter Search Term",
+         description: "Please type what you want to search for.",
+       });
+       return;
+     }
+     router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
    };
 
    // Function to handle navigation, checks login status for protected routes
@@ -145,7 +155,7 @@ export default function Home() {
                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v16H6.5a2.5 2.5 0 0 1 0-5H20"></path>
                </svg>
-               <span className="inline-block font-bold">BookShelfie</span> {/* Updated Name */}
+               <span className="inline-block font-bold">BookBurst</span> {/* Updated Name */}
              </Link>
 
              {/* Search Bar */}
@@ -165,10 +175,27 @@ export default function Home() {
           {/* Right Section: Icons & Profile */}
           <div className="flex items-center justify-end space-x-1 sm:space-x-2"> {/* Reduced space between icons */}
             {/* Search Icon Button for Mobile */}
-            <Button variant="ghost" size="icon" className="sm:hidden">
-                <Search className="h-5 w-5" />
-                <span className="sr-only">Search</span>
-            </Button>
+             {/* Mobile Search Input - Shown instead of icon button when search is intended */}
+             <div className="sm:hidden flex items-center relative">
+                <Input
+                    type="search"
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 h-9 text-sm w-32" // Adjust width as needed
+                    aria-label="Search books"
+                />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9"
+                    onClick={handleMobileSearchClick} // Trigger search on click
+                    aria-label="Submit search"
+                 >
+                    <Search className="h-4 w-4" />
+                 </Button>
+             </div>
+
 
             {/* Readers Club Button - Use navigate function */}
             <Button variant="ghost" size="icon" onClick={() => navigate('/readers-club')} aria-label="Readers Club">
@@ -251,7 +278,7 @@ export default function Home() {
        {/*
        <footer className="mt-auto border-t bg-muted/40 py-4">
          <div className="container text-center text-sm text-muted-foreground">
-            BookShelfie © {new Date().getFullYear()}
+            BookBurst © {new Date().getFullYear()}
          </div>
        </footer>
        */}
