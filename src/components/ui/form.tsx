@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -44,13 +45,31 @@ const FormField = <
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
-  const { getFieldState, formState } = useFormContext()
+  const form = useFormContext() // Get the whole form context first
 
-  const fieldState = getFieldState(fieldContext.name, formState)
-
-  if (!fieldContext) {
-    throw new Error("useFormField should be used within <FormField>")
+  // Ensure form context exists before destructuring
+  if (!form || !fieldContext) {
+    if (!fieldContext) {
+      throw new Error("useFormField should be used within <FormField>");
+    }
+    // Don't throw if form context is missing, components like FormMessage might be rendered conditionally
+    // before the form is fully initialized or outside the FormProvider. Return dummy values.
+    // console.warn("useFormContext returned null. Ensure useFormField is used within a FormProvider.");
+    return {
+      id: itemContext.id,
+      name: '' as any, // Provide a default empty name or handle as needed
+      formItemId: `${itemContext.id}-form-item`,
+      formDescriptionId: `${itemContext.id}-form-item-description`,
+      formMessageId: `${itemContext.id}-form-item-message`,
+      error: undefined,
+      invalid: false,
+      isDirty: false,
+      isTouched: false,
+    };
   }
+
+  const { getFieldState, formState } = form;
+  const fieldState = getFieldState(fieldContext.name, formState);
 
   const { id } = itemContext
 
@@ -148,6 +167,13 @@ const FormMessage = React.forwardRef<
 >(({ className, children, ...props }, ref) => {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message ?? "") : children
+
+  // Check if form context was available; if not, error will be undefined.
+  // Don't render if no error and no children.
+  if (!error && !children) {
+    return null;
+  }
+
 
   if (!body) {
     return null
