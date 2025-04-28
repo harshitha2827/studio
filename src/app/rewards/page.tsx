@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Gift, HelpCircle, BarChart, CalendarPlus, UserPlus } from 'lucide-react';
+import { ArrowLeft, Gift, HelpCircle, BarChart, CalendarPlus, UserPlus, History } from 'lucide-react'; // Added History icon
 import { mockRewardBalance } from '@/app/readers-club/page'; // Import mock balance from readers club
 
 export default function RewardsPage() {
@@ -41,9 +41,11 @@ export default function RewardsPage() {
                     <p className="text-muted-foreground mt-1">points</p>
                 </CardContent>
                 <CardFooter className="flex justify-center">
-                    {/* Placeholder for viewing transaction history */}
-                    <Button variant="outline" size="sm">
-                        <BarChart className="mr-2 h-4 w-4" /> View History
+                    {/* Update button to be a Link */}
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href="/rewards/history">
+                             <History className="mr-2 h-4 w-4" /> View History
+                        </Link>
                     </Button>
                 </CardFooter>
             </Card>

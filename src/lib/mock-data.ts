@@ -1,5 +1,6 @@
 
 import type { Book, ReadingStatus } from "@/interfaces/book";
+import type { RewardTransaction, TransactionType } from "@/interfaces/reward"; // Import Reward types
 
 /**
  * Generates a list of sample books for demonstration purposes.
@@ -77,3 +78,87 @@ export const generateSampleBooks = (count: number, seedPrefix: string): Book[] =
     return b.addedDate.getTime() - a.addedDate.getTime();
   });
 };
+
+
+/**
+ * Generates a list of sample reward transactions.
+ * @param count The number of transactions to generate.
+ * @returns An array of RewardTransaction objects.
+ */
+export const generateSampleTransactions = (count: number): RewardTransaction[] => {
+    const transactions: RewardTransaction[] = [];
+    const descriptionsEarn = [
+        "Completed 'Read 5 Books' Challenge",
+        "Weekly Discussion Participation Bonus",
+        "Finished 'War and Peace' Marathon",
+        "Milestone: Read 50 Books",
+        "Weekend Reading Marathon Reward",
+        "Joined Readers Club",
+    ];
+    const descriptionsSpend = [
+        "Entered 'Fantasy Quiz'",
+        "Hosted 'Mystery Readers' Challenge",
+        "Purchased Profile Badge: Avid Reader", // Future feature example
+        "Entered 'Classics Trivia'",
+    ];
+    const baseDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getTime(); // Start 30 days ago
+
+    // Simple pseudo-random number generator for consistency
+    const pseudoRandom = (seed: number) => {
+      let x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
+    for (let i = 1; i <= count; i++) {
+        const seed = 12345 + i; // Simple seed
+        const randomValue = pseudoRandom(seed);
+        const type: TransactionType = pseudoRandom(seed + 1) > 0.4 ? 'earn' : 'spend'; // More earns than spends
+        const dateOffset = randomValue * (Date.now() - baseDate);
+        const timestamp = new Date(baseDate + dateOffset);
+        let description = '';
+        let amount = 0;
+
+        if (type === 'earn') {
+            description = descriptionsEarn[Math.floor(pseudoRandom(seed + 2) * descriptionsEarn.length)];
+            amount = [10, 25, 50, 100][Math.floor(pseudoRandom(seed + 3) * 4)];
+        } else {
+            // Ensure there are spend descriptions before trying to access
+            if (descriptionsSpend.length > 0) {
+              description = descriptionsSpend[Math.floor(pseudoRandom(seed + 4) * descriptionsSpend.length)];
+              amount = [-15, -30, -50][Math.floor(pseudoRandom(seed + 5) * 3)]; // Spend amounts (negative)
+            } else {
+              // Fallback if descriptionsSpend is empty
+              description = "Generic Spend Action";
+              amount = -20;
+            }
+        }
+
+        transactions.push({
+            id: `txn-${seed}-${timestamp.getTime()}`,
+            timestamp: timestamp,
+            description: description,
+            type: type,
+            amount: amount,
+        });
+    }
+
+    // Sort by timestamp, most recent first
+    return transactions.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+};
+
+// Store transactions in localStorage for the history page
+if (typeof window !== 'undefined') {
+    try {
+        const existingTransactions = localStorage.getItem('mockRewardTransactions');
+        if (!existingTransactions) {
+            const mockTransactions = generateSampleTransactions(15); // Generate 15 sample transactions
+            const transactionsToStore = mockTransactions.map(t => ({
+                ...t,
+                timestamp: t.timestamp.toISOString(), // Serialize date
+            }));
+            localStorage.setItem('mockRewardTransactions', JSON.stringify(transactionsToStore));
+        }
+    } catch (e) {
+        console.error("Failed to store mock transactions in localStorage", e);
+    }
+}
