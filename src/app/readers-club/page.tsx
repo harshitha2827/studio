@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Import buttonVariants
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, BookOpen, CalendarDays, MessageSquare, Target, Trophy, Users, UserCheck, Star } from 'lucide-react'; // Added Star icon
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
+import { cn } from '@/lib/utils'; // Import cn
 
 
 // --- Enhanced Mock Data (Could be moved to a separate file later) ---
@@ -190,18 +191,16 @@ export default function ReadersClubPage() {
 
                 {/* Challenges Icon Button */}
                <Tooltip>
-                  <TooltipTrigger asChild> {/* Add asChild here */}
-                     <Button
-                       variant="ghost"
-                       size="icon"
+                  <TooltipTrigger asChild>
+                     {/* Make Link the direct child and apply button styles */}
+                     <Link
+                       href="#challenges-section"
                        onClick={scrollToChallenges}
                        aria-label="View reading challenges and marathons"
-                       asChild // Use asChild to allow Link behavior
-                       >
-                       <Link href="#challenges-section"> {/* Link to the anchor ID */}
-                           <Trophy className="h-5 w-5 text-primary" />
-                       </Link>
-                     </Button>
+                       className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))} // Apply styles here
+                     >
+                       <Trophy className="h-5 w-5 text-primary" />
+                     </Link>
                   </TooltipTrigger>
                   <TooltipContent>
                      <p>View Challenges</p>
