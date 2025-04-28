@@ -48,21 +48,35 @@ const generateSampleBooks = (count: number): Book[] => {
 
 
 // Initial state should match server render - use sampleBooks directly here
-const sampleBooks = generateSampleBooks(500); // Generate the books
+const sampleBooks = generateSampleBooks(20); // Generate fewer books for easier example spotting
+
+// Add a specific example book to demonstrate addition
+const exampleBook: Book = {
+    id: 'example-12345',
+    title: 'The Newly Added Book',
+    author: 'Example Author',
+    status: 'want-to-read',
+    addedDate: new Date(), // Add with current date
+    coverUrl: `https://picsum.photos/seed/exampleBook/300/400`,
+    notes: "This book was added as an example via the 'Add Book' functionality simulation.",
+};
+
+// Combine generated samples with the specific example
+const initialBooks = [exampleBook, ...sampleBooks];
 
 export function Bookshelf() {
   // Initialize with server-renderable data first to prevent hydration mismatch
-  const [books, setBooks] = React.useState<Book[]>(sampleBooks);
+  const [books, setBooks] = React.useState<Book[]>(initialBooks); // Use combined initial data
   const [isClient, setIsClient] = React.useState(false); // State to track client-side mount
 
   const [editingBook, setEditingBook] = React.useState<Book | null>(null);
   const [bookToDelete, setBookToDelete] = React.useState<string | null>(null);
    const [activeTab, setActiveTab] = React.useState<ReadingStatus>(() => {
-     // Initialize tab from cookie or default to 'reading' - Safe for hydration if cookie logic runs client-side
+     // Initialize tab from cookie or default to 'want-to-read' to show the example book first
      if (typeof window !== 'undefined') {
-        return (getCookie(BOOKSHELF_TAB_COOKIE) as ReadingStatus) || 'reading';
+        return (getCookie(BOOKSHELF_TAB_COOKIE) as ReadingStatus) || 'want-to-read';
      }
-     return 'reading'; // Default for server render
+     return 'want-to-read'; // Default for server render
    });
   const [searchTerm, setSearchTerm] = React.useState("");
 
@@ -87,12 +101,18 @@ export function Bookshelf() {
          }
        } catch (e) {
          console.error("Failed to parse books from localStorage:", e);
-         // Optionally reset localStorage or fallback to samples if data is corrupt
+         // Optionally reset localStorage or fallback to initial if data is corrupt
          // localStorage.removeItem('bookshelfBooks');
-         // setBooks(sampleBooks); // Fallback if needed
+         setBooks(initialBooks); // Fallback to initial state if parsing fails
        }
+     } else {
+        // If no saved books, initialize localStorage with the initial set including the example
+        const initialBooksToSave = initialBooks.map(book => ({
+            ...book,
+            addedDate: book.addedDate.toISOString(),
+        }));
+        localStorage.setItem('bookshelfBooks', JSON.stringify(initialBooksToSave));
      }
-     // If no saved books, the state remains as sampleBooks (or initial empty state if preferred)
    }, []); // Empty dependency array ensures this runs only once on mount
 
 
