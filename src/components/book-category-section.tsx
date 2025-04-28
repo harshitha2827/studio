@@ -16,12 +16,12 @@ export function BookCategorySection({ title, books }: BookCategorySectionProps) 
       <h2 className="text-2xl font-semibold tracking-tight text-primary">{title}</h2>
       {books.length > 0 ? (
         <ScrollArea className="w-full whitespace-nowrap rounded-md">
-           <div className="flex space-x-4 pb-4">
+           <div className="flex space-x-3 pb-4"> {/* Adjusted spacing slightly */}
             {books.map((book) => (
               <SimpleBookCard
                 key={book.id}
                 book={book}
-                className="w-[150px] sm:w-[180px] flex-shrink-0" // Set fixed width for horizontal scrolling items
+                className="w-[120px] sm:w-[150px] flex-shrink-0" // Reduced width
               />
             ))}
            </div>
