@@ -24,42 +24,48 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link'; // Import Link for navigation
+import Link from 'next/link';
 
-const loginSchema = z.object({
+const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'), // Simple check for presence
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'], // Set the error path to confirmPassword field
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type SignupFormValues = z.infer<typeof signupSchema>;
 
-export default function LoginPage() {
+export default function SignupPage() {
   const { toast } = useToast();
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       email: '',
       password: '',
+      confirmPassword: '',
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    // Placeholder for actual login logic
-    console.log('Login attempt with:', data.email); // Avoid logging password
+  const onSubmit = (data: SignupFormValues) => {
+    // Placeholder for actual signup logic
+    console.log('Signup attempt with:', { email: data.email }); // Avoid logging password
     toast({
-      title: 'Login Submitted',
-      description: 'Login functionality is not yet implemented.',
+      title: 'Signup Submitted',
+      description: 'Signup functionality is not yet implemented.',
     });
     // In a real app, you would call an authentication service here
+    // Consider redirecting the user after successful signup
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Login to BookShelfie</CardTitle>
+          <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account
+            Enter your email and password to sign up for BookShelfie
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -95,21 +101,33 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <Button type="submit" className="w-full">
-                Login
+                Sign Up
               </Button>
             </form>
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col items-center text-sm">
-           {/* Links for signup and back to bookshelf */}
            <div className="mt-4 text-center text-muted-foreground">
-             Don't have an account?{' '}
-             <Link href="/signup" className="underline text-primary hover:text-primary/80">
-               Sign up
+             Already have an account?{' '}
+             <Link href="/login" className="underline text-primary hover:text-primary/80">
+               Login
              </Link>
-            <span className="mx-1">|</span>
-             <Link href="/" className="underline text-primary hover:text-primary/80">
+             <span className="mx-1">|</span>
+              <Link href="/" className="underline text-primary hover:text-primary/80">
                Back to Bookshelf
              </Link>
            </div>
