@@ -57,7 +57,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Login to BookShelfie</CardTitle>
+          <CardTitle className="text-2xl">Login to Bookshelf</CardTitle>
           <CardDescription>
             Enter your email below to login to your account
           </CardDescription>
@@ -110,7 +110,7 @@ export default function LoginPage() {
              </Link>
             <span className="mx-1">|</span>
              <Link href="/" className="underline text-primary hover:text-primary/80">
-               Back to Bookshelf
+               Back to Home
              </Link>
            </div>
         </CardFooter>

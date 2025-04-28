@@ -76,7 +76,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your email and password to sign up for BookShelfie
+            Enter your email and password to sign up for Bookshelf
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -139,7 +139,7 @@ export default function SignupPage() {
              </Link>
              <span className="mx-1">|</span>
               <Link href="/" className="underline text-primary hover:text-primary/80">
-               Back to Bookshelf
+               Back to Home
              </Link>
            </div>
         </CardFooter>
