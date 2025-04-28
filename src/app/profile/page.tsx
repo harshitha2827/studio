@@ -32,13 +32,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, ArrowLeft, User } from 'lucide-react'; // Added User icon for fallback
+import { CalendarIcon, ArrowLeft, User, Camera, Image as ImageIcon } from 'lucide-react'; // Added Camera and ImageIcon
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 
-// Define the schema for profile data, including avatar URL
+// Define the schema for profile data, including avatar URL (or data URI)
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   username: z
@@ -47,33 +47,35 @@ const profileSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
   email: z.string().email('Invalid email address'), // Assuming email is fetched and read-only for now
   dob: z.date().optional(), // Date of Birth is optional
-  avatarUrl: z.string().url("Invalid URL").optional().or(z.literal('')), // Optional Avatar URL
+  avatarUrl: z.string().optional().or(z.literal('')), // Optional Avatar URL or data URI
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 // Mock function to get user data (replace with actual data fetching)
 const fetchUserData = (): ProfileFormValues => {
-  // In a real app, fetch from your backend/auth provider
-  // For now, use local storage or return mock data
    if (typeof window !== 'undefined') {
      const storedData = localStorage.getItem('userProfile');
      if (storedData) {
-       const parsed = JSON.parse(storedData);
-       // Make sure to parse the date string back into a Date object
-       return {
-            ...parsed,
-            dob: parsed.dob ? new Date(parsed.dob) : undefined,
-            avatarUrl: parsed.avatarUrl || '', // Ensure avatarUrl exists
-        };
+       try {
+           const parsed = JSON.parse(storedData);
+           // Ensure avatarUrl exists and dob is parsed correctly
+           return {
+                ...parsed,
+                dob: parsed.dob ? new Date(parsed.dob) : undefined,
+                avatarUrl: parsed.avatarUrl || '',
+            };
+        } catch (e) {
+            console.error("Failed to parse user profile:", e);
+        }
      }
    }
   // Default mock data if nothing is stored
   return {
     name: 'Alex Doe',
     username: 'alex_doe',
-    email: 'alex.doe@example.com', // Typically read-only
-    dob: undefined, // Default to undefined or a sample date new Date(1995, 5, 15)
+    email: 'alex.doe@example.com',
+    dob: undefined,
     avatarUrl: '', // Default empty avatar URL
   };
 };
@@ -103,18 +105,48 @@ export default function ProfilePage() {
     defaultValues: fetchUserData(), // Load initial data
   });
 
-   // Watch avatarUrl for dynamic preview
-   const avatarUrl = form.watch("avatarUrl");
-   const userName = form.watch("name"); // Get name for fallback initials
+  const [imagePreview, setImagePreview] = React.useState<string | null>(form.getValues("avatarUrl"));
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Watch name for fallback initials
+  const userName = form.watch("name");
+
+  // Update preview when form value changes (e.g., on load or reset)
+  React.useEffect(() => {
+      setImagePreview(form.getValues("avatarUrl"));
+  }, [form.watch("avatarUrl")]);
+
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setImagePreview(result);
+        form.setValue('avatarUrl', result, { shouldDirty: true }); // Update form value with data URL
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset the input value to allow selecting the same file again if needed
+     if (event.target) {
+       event.target.value = '';
+     }
+  };
+
+  const triggerFileInput = () => fileInputRef.current?.click();
+  const triggerCameraInput = () => cameraInputRef.current?.click();
+
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
+      // The avatarUrl field now contains the data URL from the preview
       await saveUserData(data);
       toast({
         title: 'Profile Updated',
         description: 'Your profile information has been saved successfully.',
       });
-      // Optionally update defaultValues if needed after save
        form.reset(data); // Reset form with the saved data to clear dirty state
     } catch (error) {
         console.error("Error saving profile:", error);
@@ -139,30 +171,57 @@ export default function ProfilePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/50 p-4">
+       {/* Hidden File Inputs */}
+        <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            style={{ display: 'none' }}
+        />
+        <input
+            type="file"
+            ref={cameraInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            capture="user" // Trigger camera on mobile
+            style={{ display: 'none' }}
+        />
+
        <Card className="w-full max-w-2xl shadow-lg relative">
-        {/* Back Button */}
          <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 left-4 text-muted-foreground hover:text-foreground z-10" // Ensure button is above other content
-            onClick={() => router.push('/')} // Navigate back to home/bookshelf
+            className="absolute top-4 left-4 text-muted-foreground hover:text-foreground z-10"
+            onClick={() => router.push('/')}
             aria-label="Back to Bookshelf"
           >
            <ArrowLeft className="h-5 w-5" />
          </Button>
 
-         {/* Avatar Display */}
-         <div className="flex justify-center pt-8 -mb-8">
-            <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                <AvatarImage src={avatarUrl} alt={userName || 'User Profile'} />
+         {/* Avatar Display & Upload Buttons */}
+         <div className="flex flex-col items-center pt-8 -mb-2">
+            <Avatar className="h-24 w-24 border-4 border-background shadow-md mb-4">
+                <AvatarImage src={imagePreview || undefined} alt={userName || 'User Profile'} />
                 <AvatarFallback className="text-2xl bg-muted text-muted-foreground">
                  {userName ? getInitials(userName) : <User className="h-8 w-8" />}
                 </AvatarFallback>
              </Avatar>
+             <div className="flex gap-2">
+                 <Button variant="outline" size="sm" onClick={triggerFileInput}>
+                     <ImageIcon className="mr-2 h-4 w-4" /> Upload
+                 </Button>
+                 <Button variant="outline" size="sm" onClick={triggerCameraInput}>
+                    <Camera className="mr-2 h-4 w-4" /> Capture
+                 </Button>
+             </div>
+             <FormMessage className="text-xs mt-1">
+                 {form.formState.errors.avatarUrl?.message}
+            </FormMessage>
          </div>
 
 
-        <CardHeader className="text-center pt-16"> {/* Increased padding-top */}
+        <CardHeader className="text-center pt-6"> {/* Adjusted padding-top */}
           <CardTitle className="text-2xl">Profile Details</CardTitle>
           <CardDescription>
             View and update your personal information.
@@ -171,19 +230,15 @@ export default function ProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Avatar URL Field */}
+               {/* Hidden Field for avatarUrl - managed by state/buttons */}
               <FormField
                 control={form.control}
                 name="avatarUrl"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Profile Picture URL</FormLabel>
+                  <FormItem style={{ display: 'none' }}>
                     <FormControl>
-                      <Input type="url" placeholder="https://example.com/your-avatar.jpg" {...field} />
+                      <Input type="hidden" {...field} />
                     </FormControl>
-                     <FormDescription>
-                       Enter the URL of your profile picture.
-                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -270,7 +325,7 @@ export default function ProfilePage() {
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => field.onChange(date || undefined)} // Handle undefined date
                           disabled={(date) =>
                             date > new Date() || date < new Date("1900-01-01")
                           }
@@ -292,7 +347,11 @@ export default function ProfilePage() {
                  <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.reset(fetchUserData())} // Reset to original/fetched data
+                    onClick={() => {
+                        const defaultData = fetchUserData();
+                        form.reset(defaultData);
+                        setImagePreview(defaultData.avatarUrl); // Reset preview as well
+                    }}
                     disabled={!form.formState.isDirty || form.formState.isSubmitting}
                   >
                     Cancel

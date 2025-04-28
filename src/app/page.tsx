@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; //
 // Simple type for profile data needed here
 type UserProfile = {
   name?: string;
-  avatarUrl?: string;
+  avatarUrl?: string; // Can be a URL or a data URI
 };
 
 export default function Home() {
@@ -31,15 +31,11 @@ export default function Home() {
 
   // Simulate checking auth state and fetching profile data on mount
   React.useEffect(() => {
-    // Replace with your actual check, e.g., check for a token
-    // const userIsAuthenticated = localStorage.getItem('isLoggedIn') === 'true';
-    // setIsLoggedIn(userIsAuthenticated);
-
-    // If logged in, fetch basic profile data (e.g., from localStorage for demo)
     if (isLoggedIn && typeof window !== 'undefined') {
        const storedData = localStorage.getItem('userProfile');
        if (storedData) {
             try {
+                // Parse data, which might include avatarUrl as data URI
                 const parsed: { name?: string; avatarUrl?: string } = JSON.parse(storedData);
                 setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl });
             } catch (e) {
@@ -56,16 +52,15 @@ export default function Home() {
   }, [isLoggedIn]); // Re-run if login status changes
 
   const handleLogout = () => {
-    // Simulate logout action
-    // localStorage.setItem('isLoggedIn', 'false'); // Example for local storage
-    // localStorage.removeItem('userProfile'); // Clear profile on logout
     setIsLoggedIn(false);
     setUserProfile(null); // Clear profile state
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('userProfile'); // Clear stored profile on logout
+    }
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out.",
     });
-    // In a real app, you'd redirect or clear auth state properly
   };
 
    // Generate initials for Avatar fallback
@@ -88,7 +83,8 @@ export default function Home() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name || 'User Profile'} />
+                     {/* AvatarImage src can handle both URLs and data URIs */}
+                    <AvatarImage src={userProfile.avatarUrl || undefined} alt={userProfile.name || 'User Profile'} />
                     <AvatarFallback>
                        {getInitials(userProfile.name)}
                     </AvatarFallback>
