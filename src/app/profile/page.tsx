@@ -32,7 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, ArrowLeft, User, Camera, Image as ImageIcon } from 'lucide-react'; // Added Camera and ImageIcon
+import { CalendarIcon, ArrowLeft, User, Camera, Image as ImageIcon, Users, UserCheck } from 'lucide-react'; // Added Users, UserCheck
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -116,6 +116,10 @@ export default function ProfilePage() {
 
   // Watch avatarUrl for preview and error handling
   const watchedAvatarUrl = form.watch("avatarUrl");
+
+  // Mock follower/following counts
+  const [followerCount, setFollowerCount] = React.useState(Math.floor(Math.random() * 1000));
+  const [followingCount, setFollowingCount] = React.useState(Math.floor(Math.random() * 500));
 
   React.useEffect(() => {
       setImagePreview(watchedAvatarUrl);
@@ -215,12 +219,23 @@ export default function ProfilePage() {
             <form onSubmit={form.handleSubmit(onSubmit)}>
                 {/* Avatar Display & Upload Buttons - Moved inside Form */}
                 <div className="flex flex-col items-center pt-8">
-                    <Avatar className="h-24 w-24 border-4 border-background shadow-md mb-4">
+                    <Avatar className="h-24 w-24 border-4 border-background shadow-md mb-2">
                         <AvatarImage src={imagePreview || undefined} alt={userName || 'User Profile'} />
                         <AvatarFallback className="text-2xl bg-muted text-muted-foreground">
                          {userName ? getInitials(userName) : <User className="h-8 w-8" />}
                         </AvatarFallback>
                      </Avatar>
+                     {/* Follower/Following Counts */}
+                     <div className="flex gap-4 text-sm text-muted-foreground mb-3">
+                        <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            <span><span className="font-semibold text-foreground">{followerCount}</span> Followers</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <UserCheck className="h-4 w-4" />
+                            <span><span className="font-semibold text-foreground">{followingCount}</span> Following</span>
+                        </div>
+                     </div>
                      <div className="flex gap-2">
                          <Button type="button" variant="outline" size="sm" onClick={triggerFileInput}>
                              <ImageIcon className="mr-2 h-4 w-4" /> Upload
@@ -372,3 +387,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
