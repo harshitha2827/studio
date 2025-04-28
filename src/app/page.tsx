@@ -6,7 +6,7 @@ import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book typ
 import { Bookshelf } from "@/components/bookshelf";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, User, Settings, History } from "lucide-react"; // Import necessary icons
+import { LogOut, User, Settings, History, BookMarked } from "lucide-react"; // Import necessary icons, added BookMarked
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -128,9 +128,24 @@ export default function Home() {
              </Link>
            </div>
 
-          {/* Right Section: Profile Dropdown or Login Button */}
+          {/* Right Section: Bookshelf Button, Profile Dropdown or Login Button */}
           <div className="flex flex-1 items-center justify-end space-x-4">
-            <nav className="flex items-center space-x-1">
+            <nav className="flex items-center space-x-2">
+              {/* Bookshelf Button - Link to the bookshelf section */}
+              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+                <Link href="/#bookshelf-section">
+                  <BookMarked className="mr-2 h-4 w-4" />
+                  My Bookshelf
+                </Link>
+              </Button>
+              {/* Icon only button for mobile */}
+               <Button asChild variant="ghost" size="icon" className="sm:hidden">
+                 <Link href="/#bookshelf-section" aria-label="My Bookshelf">
+                   <BookMarked className="h-5 w-5" />
+                 </Link>
+               </Button>
+
+
               {isClient && (
                 isLoggedIn && userProfile ? (
                   <DropdownMenu>
@@ -191,8 +206,10 @@ export default function Home() {
          {/* Separator */}
          <hr className="border-border my-8" />
 
-        {/* User's Personal Bookshelf */}
-         <Bookshelf />
+        {/* User's Personal Bookshelf - Add an ID here */}
+         <div id="bookshelf-section" className="scroll-mt-16"> {/* Add ID and scroll margin */}
+            <Bookshelf />
+         </div>
       </main>
 
        {/* Optional Footer (Consider adding later if needed) */}
