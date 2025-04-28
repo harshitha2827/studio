@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import type { Book } from '@/interfaces/book'; // Assuming Book interface exists
 import { SimpleBookCard } from '@/components/simple-book-card'; // Use simple card for books
 import { generateSampleBooks } from '@/lib/mock-data'; // Use mock data generator
+import { cn } from '@/lib/utils'; // Import cn utility function
 
 // --- Mock Data Structures (Replace with actual data fetching/state) ---
 
@@ -50,6 +51,35 @@ const currentUserId = 'user1'; // Assume Alice is logged in
 const currentUser = mockUsers.find(u => u.id === currentUserId);
 
 // Mock Existing Recommendations (replace with actual fetching)
+// Load recommendations from localStorage or generate new ones
+const loadMockRecommendations = (): Recommendation[] => {
+    if (typeof window === 'undefined') return []; // Guard against SSR access
+
+    const storedRecsRaw = localStorage.getItem('mockRecommendations');
+    if (storedRecsRaw) {
+        try {
+            return JSON.parse(storedRecsRaw).map((r: any) => ({
+                ...r,
+                timestamp: new Date(r.timestamp), // Parse dates
+                // Ensure sender/recipient/book are properly structured if needed
+                // This example assumes basic structure is stored
+            }));
+        } catch (e) {
+            console.error("Failed to parse recommendations from localStorage:", e);
+            // Fallback or clear localStorage?
+        }
+    }
+    // If nothing in storage, generate and store
+    const newRecs = generateMockRecommendations(10);
+    try {
+        localStorage.setItem('mockRecommendations', JSON.stringify(newRecs.map(r => ({...r, timestamp: r.timestamp.toISOString() }))));
+    } catch (e) {
+        console.error("Failed to store initial recommendations:", e);
+    }
+    return newRecs;
+}
+
+
 const generateMockRecommendations = (count: number): Recommendation[] => {
   const recs: Recommendation[] = [];
   const books = generateSampleBooks(count * 2, 'recommendation-books'); // Generate some books
@@ -81,8 +111,6 @@ const generateMockRecommendations = (count: number): Recommendation[] => {
   // Sort by date, newest first
   return recs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 };
-
-const mockRecommendations: Recommendation[] = generateMockRecommendations(10);
 
 // --- Helper Functions ---
 const getInitials = (name: string | undefined): string => {
@@ -122,7 +150,7 @@ export default function RecommendationsPage() {
     const userProfileExists = localStorage.getItem('userProfile');
     const loggedIn = !!userProfileExists;
     setIsLoggedIn(loggedIn);
-    setIsLoading(false);
+
 
     if (!loggedIn) {
         toast({
@@ -132,10 +160,12 @@ export default function RecommendationsPage() {
         });
     } else {
         // Load user's recommendations (mock implementation)
-        setReceivedRecommendations(mockRecommendations.filter(r => r.recipient.id === currentUserId));
-        setSentRecommendations(mockRecommendations.filter(r => r.sender.id === currentUserId));
+        const allRecs = loadMockRecommendations(); // Load or generate
+        setReceivedRecommendations(allRecs.filter(r => r.recipient.id === currentUserId));
+        setSentRecommendations(allRecs.filter(r => r.sender.id === currentUserId));
     }
-  }, [router, toast]);
+     setIsLoading(false); // Set loading false after initial checks and data loading
+  }, [router, toast]); // Keep dependencies minimal for the initial load
 
   // --- Form Handlers ---
 
@@ -190,6 +220,29 @@ export default function RecommendationsPage() {
     // 1. Send data (currentUser.id, selectedRecipient.id, selectedBook.id, recommendationMessage) to backend API.
     // 2. Handle response (success/failure).
 
+     const newRecommendation: Recommendation = {
+         id: `rec-${Date.now()}-${Math.random().toString(16).slice(2)}`, // Simple unique ID
+         sender: currentUser,
+         recipient: selectedRecipient,
+         book: selectedBook,
+         message: recommendationMessage || undefined,
+         timestamp: new Date(),
+         liked: false, // Not liked initially
+     };
+
+     // Update state optimistically
+     setSentRecommendations(prev => [newRecommendation, ...prev].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+     // If the recipient is the current user (self-recommendation, for testing?), update received too
+     if (selectedRecipient.id === currentUserId) {
+         setReceivedRecommendations(prev => [newRecommendation, ...prev].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+     }
+
+      // Save updated list to localStorage
+     const updatedRecs = loadMockRecommendations(); // Load existing
+     updatedRecs.push(newRecommendation);
+     localStorage.setItem('mockRecommendations', JSON.stringify(updatedRecs.map(r => ({...r, timestamp: r.timestamp.toISOString() }))));
+
+
     console.log(`Sending recommendation of "${selectedBook.title}" to ${selectedRecipient.name} from ${currentUser.name} with message: "${recommendationMessage}"`);
     toast({ title: "Recommendation Sent!", description: `You recommended "${selectedBook.title}" to ${selectedRecipient.name}.` });
 
@@ -207,9 +260,19 @@ export default function RecommendationsPage() {
    const handleLikeRecommendation = (recommendationId: string) => {
        // --- TODO: Implement actual like/unlike logic via API ---
         console.log(`Toggling like for recommendation ${recommendationId}`);
-        setReceivedRecommendations(prev => prev.map(r =>
+        const updatedRecs = receivedRecommendations.map(r =>
             r.id === recommendationId ? { ...r, liked: !r.liked } : r
-        ));
+        );
+        setReceivedRecommendations(updatedRecs);
+
+        // Update localStorage
+        const allRecs = loadMockRecommendations();
+        const index = allRecs.findIndex(r => r.id === recommendationId);
+        if (index !== -1) {
+            allRecs[index].liked = !allRecs[index].liked; // Toggle the like status
+             localStorage.setItem('mockRecommendations', JSON.stringify(allRecs.map(r => ({...r, timestamp: r.timestamp.toISOString() }))));
+        }
+
        // toast({ title: "Updated!" }); // Optional feedback
    }
 
@@ -307,7 +370,7 @@ export default function RecommendationsPage() {
                        </Card>
                    )}
                    {selectedRecipient && !searchedUsers.length && (
-                       <p className="text-xs text-muted-foreground pl-2">Selected: {selectedRecipient.name} (@{selectedRecipient.username})</p>
+                       <p className="text-xs text-muted-foreground pl-2 pt-1">Selected: {selectedRecipient.name} (@{selectedRecipient.username})</p>
                    )}
                 </div>
 
@@ -348,7 +411,7 @@ export default function RecommendationsPage() {
                          </Card>
                      )}
                     {selectedBook && !searchedBooks.length && (
-                        <p className="text-xs text-muted-foreground pl-2">Selected: {selectedBook.title} by {selectedBook.author}</p>
+                        <p className="text-xs text-muted-foreground pl-2 pt-1">Selected: {selectedBook.title} by {selectedBook.author}</p>
                     )}
                 </div>
 
@@ -462,3 +525,5 @@ export default function RecommendationsPage() {
     </div>
   );
 }
+
+    
