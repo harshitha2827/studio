@@ -26,19 +26,21 @@ type UserProfile = {
 export default function Home() {
   // Simulate authentication state - replace with actual auth logic later
   // For demo, assume user is logged in. In a real app, this would come from context/auth state.
-  const [isLoggedIn, setIsLoggedIn] = React.useState(true);
-  const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(true); // Initial state reflects server assumption
+  const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null); // Initial state null
+  const [isClient, setIsClient] = React.useState(false); // Track client mount
   const { toast } = useToast();
 
-  // Simulate checking auth state and fetching profile data on mount
+  // Effect to run on mount and handle client-side logic
   React.useEffect(() => {
-    if (isLoggedIn && typeof window !== 'undefined') {
+    setIsClient(true); // Component has mounted
+
+    // Check auth state (simulated) and load profile from localStorage
+    if (isLoggedIn) {
        const storedData = localStorage.getItem('userProfile');
        if (storedData) {
             try {
-                // Parse data, which might include avatarUrl as data URI
                 const parsed: { name?: string; avatarUrl?: string; dob?: string } = JSON.parse(storedData);
-                 // Use parsed data. Ensure avatarUrl exists.
                 setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl || '' });
             } catch (e) {
                  console.error("Failed to parse user profile from localStorage", e);
@@ -58,8 +60,6 @@ export default function Home() {
     setUserProfile(null); // Clear profile state
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userProfile'); // Clear stored profile on logout
-      // Optionally clear bookshelf data too, or keep it associated with the device
-      // localStorage.removeItem('bookshelfBooks');
     }
     toast({
       title: "Logged Out",
@@ -101,50 +101,55 @@ export default function Home() {
           {/* Right Section: Profile Dropdown or Login Button */}
           <div className="flex flex-1 items-center justify-end space-x-4">
             <nav className="flex items-center space-x-1">
-              {isLoggedIn && userProfile ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                       <Avatar className="h-9 w-9 border">
-                          {/* AvatarImage src can handle both URLs and data URIs */}
-                          <AvatarImage src={userProfile.avatarUrl || undefined} alt={userProfile.name || 'User Profile'} />
-                          <AvatarFallback>
-                             {getInitials(userProfile.name)}
-                          </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>{userProfile.name || 'My Account'}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="cursor-pointer">
-                      <Link href="/profile"> {/* Link to the profile page */}
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profile Details</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled className="cursor-not-allowed"> {/* Disabled for now */}
-                      <History className="mr-2 h-4 w-4" />
-                      <span>Reading History</span>
-                       {/* Later: Link href="/history" */}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled className="cursor-not-allowed"> {/* Disabled for now */}
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                      {/* Later: Link href="/settings" */}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/login">Login</Link>
-                </Button>
+              {/* Only render profile dropdown or login button after client mount */}
+              {isClient && (
+                isLoggedIn && userProfile ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                         <Avatar className="h-9 w-9 border">
+                            {/* AvatarImage src can handle both URLs and data URIs */}
+                            <AvatarImage src={userProfile.avatarUrl || undefined} alt={userProfile.name || 'User Profile'} />
+                            <AvatarFallback>
+                               {getInitials(userProfile.name)}
+                            </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>{userProfile.name || 'My Account'}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link href="/profile"> {/* Link to the profile page */}
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile Details</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled className="cursor-not-allowed"> {/* Disabled for now */}
+                        <History className="mr-2 h-4 w-4" />
+                        <span>Reading History</span>
+                         {/* Later: Link href="/history" */}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled className="cursor-not-allowed"> {/* Disabled for now */}
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                        {/* Later: Link href="/settings" */}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/login">Login</Link>
+                  </Button>
+                )
               )}
+              {/* Render a placeholder or nothing during SSR/pre-hydration */}
+              {!isClient && <div className="h-9 w-9"></div>}
             </nav>
           </div>
         </div>
@@ -152,7 +157,6 @@ export default function Home() {
 
       {/* Main content area - Bookshelf component handles its own internal layout */}
       <main className="flex-1">
-        {/* Container removed from here, as Bookshelf has its own container */}
          <Bookshelf />
       </main>
 

@@ -16,207 +16,90 @@ import { DialogTrigger } from "@/components/ui/dialog"; // Need DialogTrigger fo
 
 const BOOKSHELF_TAB_COOKIE = "bookshelf_last_tab";
 
-// Sample Books Data - Expanded to 15 books
-const sampleBooks: Book[] = [
-  // Existing 5 books
-  {
-    id: "1",
-    title: "To Kill a Mockingbird",
-    author: "Harper Lee",
-    status: "finished",
-    rating: 5,
-    addedDate: new Date("2023-01-15T10:00:00Z"),
-    notes: "A classic for a reason. Atticus Finch is an inspiring character.",
-    coverUrl: "https://picsum.photos/seed/mockingbird/300/400",
-    isbn: "978-0061120084",
-  },
-  {
-    id: "2",
-    title: "1984",
-    author: "George Orwell",
-    status: "reading",
-    addedDate: new Date("2023-03-10T11:00:00Z"),
-    notes: "Thought-provoking and slightly terrifying.",
-    coverUrl: "https://picsum.photos/seed/1984/300/400",
-    isbn: "978-0451524935",
-  },
-  {
-    id: "3",
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    status: "want-to-read",
-    addedDate: new Date("2023-05-20T12:00:00Z"),
-    coverUrl: "https://picsum.photos/seed/gatsby/300/400",
-    isbn: "978-0743273565",
-  },
-   {
-    id: "4",
-    title: "Dune",
-    author: "Frank Herbert",
-    status: "finished",
-    rating: 4,
-    addedDate: new Date("2023-02-28T13:00:00Z"),
-    notes: "Incredible world-building, a bit dense at times.",
-    coverUrl: "https://picsum.photos/seed/dune/300/400",
-    isbn: "978-0441172719",
-  },
-  {
-    id: "5",
-    title: "Atomic Habits",
-    author: "James Clear",
-    status: "reading",
-    addedDate: new Date("2023-06-01T14:00:00Z"),
-    notes: "Practical advice on building good habits.",
-    coverUrl: "https://picsum.photos/seed/habits/300/400",
-    isbn: "978-0735211292",
-  },
-  // Adding 10 more books
-  {
-    id: "6",
-    title: "Sapiens: A Brief History of Humankind",
-    author: "Yuval Noah Harari",
-    status: "finished",
-    rating: 5,
-    addedDate: new Date("2023-07-15T09:30:00Z"),
-    notes: "Mind-blowing perspective on human history.",
-    coverUrl: "https://picsum.photos/seed/sapiens/300/400",
-    isbn: "978-0062316097",
-  },
-  {
-    id: "7",
-    title: "Project Hail Mary",
-    author: "Andy Weir",
-    status: "reading",
-    addedDate: new Date("2023-08-01T15:00:00Z"),
-    coverUrl: "https://picsum.photos/seed/hailmary/300/400",
-    isbn: "978-0593135204",
-  },
-  {
-    id: "8",
-    title: "The Midnight Library",
-    author: "Matt Haig",
-    status: "want-to-read",
-    addedDate: new Date("2023-08-10T10:00:00Z"),
-    coverUrl: "https://picsum.photos/seed/library/300/400",
-    isbn: "978-0525559474",
-  },
-  {
-    id: "9",
-    title: "Educated",
-    author: "Tara Westover",
-    status: "finished",
-    rating: 4,
-    addedDate: new Date("2023-04-05T16:00:00Z"),
-    notes: "Incredible and inspiring memoir.",
-    coverUrl: "https://picsum.photos/seed/educated/300/400",
-    isbn: "978-0399590504",
-  },
-  {
-    id: "10",
-    title: "Where the Crawdads Sing",
-    author: "Delia Owens",
-    status: "finished",
-    rating: 3,
-    addedDate: new Date("2023-09-01T11:00:00Z"),
-    coverUrl: "https://picsum.photos/seed/crawdads/300/400",
-    isbn: "978-0735219090",
-  },
-  {
-    id: "11",
-    title: "The Alchemist",
-    author: "Paulo Coelho",
-    status: "want-to-read",
-    addedDate: new Date("2023-09-15T14:30:00Z"),
-    coverUrl: "https://picsum.photos/seed/alchemist/300/400",
-    isbn: "978-0062315007",
-  },
-  {
-    id: "12",
-    title: "Thinking, Fast and Slow",
-    author: "Daniel Kahneman",
-    status: "reading",
-    addedDate: new Date("2023-10-01T12:00:00Z"),
-    notes: "Fascinating insights into cognitive biases.",
-    coverUrl: "https://picsum.photos/seed/thinking/300/400",
-    isbn: "978-0374533557",
-  },
-  {
-    id: "13",
-    title: "Circe",
-    author: "Madeline Miller",
-    status: "finished",
-    rating: 5,
-    addedDate: new Date("2023-10-20T09:00:00Z"),
-    notes: "Beautiful retelling of Greek mythology.",
-    coverUrl: "https://picsum.photos/seed/circe/300/400",
-    isbn: "978-1408710196",
-  },
-  {
-    id: "14",
-    title: "The Silent Patient",
-    author: "Alex Michaelides",
-    status: "want-to-read",
-    addedDate: new Date("2023-11-05T17:00:00Z"),
-    coverUrl: "https://picsum.photos/seed/patient/300/400",
-    isbn: "978-1250301697",
-  },
-  {
-    id: "15",
-    title: "Becoming",
-    author: "Michelle Obama",
-    status: "reading",
-    addedDate: new Date("2023-11-15T13:45:00Z"),
-    coverUrl: "https://picsum.photos/seed/becoming/300/400",
-    isbn: "978-1524763138",
-  },
-];
+// Sample Books Data - Expanded to 500 books (Using placeholder generation for brevity)
+const generateSampleBooks = (count: number): Book[] => {
+  const statuses: ReadingStatus[] = ["reading", "finished", "want-to-read"];
+  const books: Book[] = [];
+  const startDate = new Date("2022-01-01").getTime();
+  const endDate = new Date().getTime();
 
+  for (let i = 1; i <= count; i++) {
+     const randomTimestamp = startDate + Math.random() * (endDate - startDate);
+     const randomDate = new Date(randomTimestamp);
+     const status = statuses[Math.floor(Math.random() * statuses.length)];
+     const hasRating = status === 'finished' && Math.random() > 0.3; // 70% chance of rating if finished
+     const hasNotes = Math.random() > 0.5; // 50% chance of notes
+     const hasCover = Math.random() > 0.2; // 80% chance of cover
+
+    books.push({
+      id: `${i}-${Date.now()}-${Math.random().toString(16).slice(2)}`, // More unique ID
+      title: `Book Title ${i}`,
+      author: `Author Name ${Math.floor(i / 5) + 1}`, // Vary authors slightly
+      status: status,
+      rating: hasRating ? Math.floor(Math.random() * 5) + 1 : undefined, // 1-5 stars
+      addedDate: randomDate,
+      notes: hasNotes ? `This is a sample note for book ${i}. It might contain some thoughts or a brief review.` : undefined,
+      coverUrl: hasCover ? `https://picsum.photos/seed/book${i}/300/400` : undefined,
+      isbn: `978-${Math.floor(Math.random() * 10000000000).toString().padStart(10, '0')}`, // Generate random ISBN-like string
+    });
+  }
+  return books.sort((a, b) => b.addedDate.getTime() - a.addedDate.getTime()); // Sort by most recently added
+};
+
+
+// Initial state should match server render - use sampleBooks directly here
+const sampleBooks = generateSampleBooks(500); // Generate the books
 
 export function Bookshelf() {
-  const [books, setBooks] = React.useState<Book[]>(() => {
-     // Load books from localStorage on initial render
-     if (typeof window !== 'undefined') {
-        const savedBooks = localStorage.getItem('bookshelfBooks');
-        // Ensure date strings are parsed back into Date objects
-        if (savedBooks) {
-          try {
-            const parsedBooks = JSON.parse(savedBooks);
-            // Check if parsedBooks is an array and not empty
-            if (Array.isArray(parsedBooks) && parsedBooks.length > 0) {
-                // Sort loaded books by addedDate descending
-                return parsedBooks.map((book: any) => ({
-                    ...book,
-                    addedDate: new Date(book.addedDate), // Convert string back to Date
-                })).sort((a: Book, b: Book) => b.addedDate.getTime() - a.addedDate.getTime());
-            }
-          } catch (e) {
-            console.error("Failed to parse books from localStorage:", e);
-            // Fall through to returning sorted sample books if parsing fails or data is invalid
-          }
-        }
-        // If no saved books or parsing failed, return sorted sample books
-        return sampleBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime());
-     }
-     // If window is not defined (SSR), return sorted sample books
-     return sampleBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Or return [] if you prefer empty on SSR
-  });
+  // Initialize with server-renderable data first to prevent hydration mismatch
+  const [books, setBooks] = React.useState<Book[]>(sampleBooks);
+  const [isClient, setIsClient] = React.useState(false); // State to track client-side mount
+
   const [editingBook, setEditingBook] = React.useState<Book | null>(null);
   const [bookToDelete, setBookToDelete] = React.useState<string | null>(null);
    const [activeTab, setActiveTab] = React.useState<ReadingStatus>(() => {
-     // Initialize tab from cookie or default to 'reading'
+     // Initialize tab from cookie or default to 'reading' - Safe for hydration if cookie logic runs client-side
      if (typeof window !== 'undefined') {
         return (getCookie(BOOKSHELF_TAB_COOKIE) as ReadingStatus) || 'reading';
      }
-     return 'reading';
+     return 'reading'; // Default for server render
    });
   const [searchTerm, setSearchTerm] = React.useState("");
 
 
   const { toast } = useToast();
 
-  // Save books to localStorage whenever the books state changes
+   // Effect to load data from localStorage only on the client after mount
+   React.useEffect(() => {
+    setIsClient(true); // Indicate component has mounted on client
+
+     const savedBooks = localStorage.getItem('bookshelfBooks');
+     if (savedBooks) {
+       try {
+         const parsedBooks = JSON.parse(savedBooks);
+         if (Array.isArray(parsedBooks)) {
+           // Parse dates and sort
+           const loadedBooks = parsedBooks.map((book: any) => ({
+             ...book,
+             addedDate: new Date(book.addedDate),
+           })).sort((a: Book, b: Book) => b.addedDate.getTime() - a.addedDate.getTime());
+           setBooks(loadedBooks); // Update state with localStorage data
+         }
+       } catch (e) {
+         console.error("Failed to parse books from localStorage:", e);
+         // Optionally reset localStorage or fallback to samples if data is corrupt
+         // localStorage.removeItem('bookshelfBooks');
+         // setBooks(sampleBooks); // Fallback if needed
+       }
+     }
+     // If no saved books, the state remains as sampleBooks (or initial empty state if preferred)
+   }, []); // Empty dependency array ensures this runs only once on mount
+
+
+  // Save books to localStorage whenever the books state changes (only on client)
   React.useEffect(() => {
-     if (typeof window !== 'undefined') {
+     // Only save if it's the client and state is initialized
+     if (isClient) {
       // Ensure dates are stored as strings (ISO format is standard)
       const booksToSave = books.map(book => ({
         ...book,
@@ -224,14 +107,14 @@ export function Bookshelf() {
       }));
       localStorage.setItem('bookshelfBooks', JSON.stringify(booksToSave));
      }
-  }, [books]);
+  }, [books, isClient]); // Depend on books and isClient
 
   // Save active tab to cookie when it changes
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isClient) { // Ensure runs only on client
       setCookie(BOOKSHELF_TAB_COOKIE, activeTab, 30); // Save for 30 days
     }
-  }, [activeTab]);
+  }, [activeTab, isClient]); // Depend on activeTab and isClient
 
 
   const handleBookSave = (book: Book) => {
@@ -240,11 +123,11 @@ export function Bookshelf() {
       if (existingIndex > -1) {
         // Update existing book
         const updatedBooks = [...prevBooks];
-        updatedBooks[existingIndex] = book;
+        updatedBooks[existingIndex] = { ...book, addedDate: prevBooks[existingIndex].addedDate }; // Keep original addedDate on update
         return updatedBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Maintain sort on update
       } else {
         // Add new book with current date as addedDate
-        const newBook = { ...book, addedDate: new Date() };
+        const newBook = { ...book, addedDate: new Date(), id: `${Date.now()}-${Math.random().toString(16).slice(2)}` }; // Ensure new ID
         return [...prevBooks, newBook].sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Keep sorted by added date desc
       }
     });
@@ -293,6 +176,7 @@ export function Bookshelf() {
     });
   };
 
+  // Filter books based on current state (which matches server on initial render)
   const filteredBooks = (status: ReadingStatus) =>
     books.filter((book) => book.status === status &&
         (book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -300,6 +184,15 @@ export function Bookshelf() {
     ).sort((a, b) => b.addedDate.getTime() - a.addedDate.getTime()); // Ensure sorting is consistent
 
   const statuses: ReadingStatus[] = ["reading", "finished", "want-to-read"];
+
+  // Calculate counts based on potentially client-updated state
+  // We only render the count on the client after hydration to avoid mismatch
+  const getCountForStatus = (status: ReadingStatus): number => {
+      return books.filter((book) => book.status === status &&
+        (book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         book.author.toLowerCase().includes(searchTerm.toLowerCase()))
+    ).length;
+  }
 
 
   return (
@@ -335,7 +228,7 @@ export function Bookshelf() {
             <TabsList className="grid grid-cols-3 sm:inline-flex sm:w-auto w-full">
               {statuses.map((status) => (
                 <TabsTrigger key={status} value={status} className="capitalize w-full sm:w-auto">
-                  {status.replace('-', ' ')} ({filteredBooks(status).length})
+                  {status.replace('-', ' ')} {isClient ? `(${getCountForStatus(status)})` : ''} {/* Only show count on client */}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -393,4 +286,3 @@ export function Bookshelf() {
     </div>
   );
 }
-
