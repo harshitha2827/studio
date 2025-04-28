@@ -80,7 +80,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Login to BookShelfie</CardTitle> {/* Updated Name */}
+          <CardTitle className="text-2xl">Login to BookBurst</CardTitle> {/* Updated Name */}
           <CardDescription>
             Enter your email below to login to your account
           </CardDescription>
