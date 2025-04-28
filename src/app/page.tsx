@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 type UserProfile = {
   name?: string;
   avatarUrl?: string; // Can be a URL or a data URI
+  username?: string; // Added username
 };
 
 
@@ -59,11 +60,12 @@ export default function Home() {
     if (loggedIn && storedData) {
        // Access localStorage only on the client
        try {
-           const parsed: { name?: string; avatarUrl?: string; dob?: string } = JSON.parse(storedData);
-           setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl || '' });
+           // Ensure username is also parsed
+           const parsed: { name?: string; avatarUrl?: string; dob?: string; username?: string } = JSON.parse(storedData);
+           setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl || '', username: parsed.username });
        } catch (e) {
             console.error("Failed to parse user profile from localStorage", e);
-            setUserProfile({ name: 'User', avatarUrl: '' }); // Fallback
+            setUserProfile({ name: 'User', avatarUrl: '', username: 'user' }); // Fallback
        }
     } else {
         setUserProfile(null); // Not logged in or no profile
@@ -80,8 +82,12 @@ export default function Home() {
       localStorage.removeItem('bookshelfBooks');
       localStorage.removeItem('mockChallenges');
       localStorage.removeItem('mockRewardTransactions');
+      localStorage.removeItem('mockRecommendations'); // Clear recommendations too
+      localStorage.removeItem('theme'); // Clear theme preference
       // Clear cookie
        document.cookie = "bookshelf_last_tab=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+       // Remove dark class on logout
+       document.documentElement.classList.remove('dark');
     }
     toast({
       title: "Logged Out",
@@ -280,16 +286,19 @@ export default function Home() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild className="cursor-pointer">
                         {/* Use navigate function for profile link */}
-                        <button onClick={() => navigate('/profile')} className="flex items-center w-full">
+                        {/* Updated to use username if available */}
+                        <button onClick={() => navigate(`/profile/${userProfile.username || ''}`)} className="flex items-center w-full">
                           <User className="mr-2 h-4 w-4" />
                           <span>Profile Details</span>
                         </button>
                       </DropdownMenuItem>
-                      {/* Removed Reading History button */}
-                      <DropdownMenuItem disabled className="cursor-not-allowed">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
-                      </DropdownMenuItem>
+                       {/* Link to Settings */}
+                       <DropdownMenuItem asChild className="cursor-pointer">
+                           <button onClick={() => navigate('/settings')} className="flex items-center w-full">
+                             <Settings className="mr-2 h-4 w-4" />
+                             <span>Settings</span>
+                           </button>
+                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" />
