@@ -6,9 +6,11 @@ import { ChatSidebar } from '@/components/chat-sidebar';
 import { ChatMessages } from '@/components/chat-messages';
 import type { Chat } from '@/interfaces/chat'; // Define this type later if needed
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MessageSquarePlus, Users } from 'lucide-react'; // Import necessary icons
+import { ArrowLeft, MessageSquarePlus, Users, LogIn } from 'lucide-react'; // Import necessary icons, Added LogIn
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation'; // Import useRouter
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 // Mock initial chat data structure (replace with actual data fetching/state management)
 const mockChats: Chat[] = [
@@ -20,13 +22,34 @@ const mockChats: Chat[] = [
 
 
 export default function ChatPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true); // Loading state
   const [selectedChat, setSelectedChat] = React.useState<Chat | null>(null);
   const [chats, setChats] = React.useState<Chat[]>(mockChats); // Manage chats state
 
-  // Placeholder for fetching user/group data
-  // React.useEffect(() => {
-  //   // Fetch initial chats
-  // }, []);
+  React.useEffect(() => {
+    // Check login status on client mount
+    const userProfileExists = localStorage.getItem('userProfile');
+    const loggedIn = !!userProfileExists;
+    setIsLoggedIn(loggedIn);
+    setIsLoading(false); // Finish loading check
+
+    if (!loggedIn) {
+        toast({
+            title: "Login Required",
+            description: "Please log in to access chat.",
+            variant: "destructive",
+        });
+        // Optionally redirect immediately
+        // router.push('/login');
+    } else {
+       // Placeholder for fetching user/group data if logged in
+       // fetchInitialChats();
+    }
+  }, [router, toast]);
+
 
   // Handler for selecting a chat from the sidebar
   const handleSelectChat = (chat: Chat) => {
@@ -52,6 +75,35 @@ export default function ChatPage() {
     // TODO: Implement UI/logic for creating chats/groups
   };
 
+
+  if (isLoading) {
+     return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <p className="text-lg text-muted-foreground">Checking login status...</p>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+     return (
+        <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/30 p-4">
+             <div className="text-center max-w-md bg-background p-8 rounded-lg shadow-lg border">
+                 <h1 className="text-2xl font-semibold mb-4">Access Denied</h1>
+                 <p className="text-muted-foreground mb-6">You need to be logged in to use the chat feature.</p>
+                 <Button onClick={() => router.push('/login')} size="lg">
+                     <LogIn className="mr-2 h-5 w-5" /> Login to Continue
+                 </Button>
+                  <Button variant="link" size="sm" asChild className="mt-4">
+                     <Link href="/">
+                         <ArrowLeft className="mr-1 h-4 w-4" /> Go Back Home
+                     </Link>
+                 </Button>
+             </div>
+        </div>
+     );
+  }
+
+  // Render chat page only if logged in
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header */}

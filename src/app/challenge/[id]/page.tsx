@@ -6,13 +6,14 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, CalendarDays, Gift, Star, UserCircle, Users, BookOpen, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Gift, Star, UserCircle, Users, BookOpen, CheckCircle, LogIn } from 'lucide-react'; // Added LogIn
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { SimpleBookCard } from '@/components/simple-book-card';
 import type { Book } from '@/interfaces/book';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils'; // Import cn
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 // Re-define the Challenge interface here for this page's use
 // Ensure structure matches the data stored in localStorage from readers-club/page.tsx
@@ -52,11 +53,29 @@ const getInitials = (name: string | undefined): string => {
 export default function ChallengeDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const challengeId = typeof params.id === 'string' ? params.id : '';
   const [challenge, setChallenge] = React.useState<ChallengeDetails | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
   React.useEffect(() => {
+    // Check login status on client mount
+    const userProfileExists = localStorage.getItem('userProfile');
+    const loggedIn = !!userProfileExists;
+    setIsLoggedIn(loggedIn);
+
+    if (!loggedIn) {
+        toast({
+            title: "Login Required",
+            description: "Please log in to view challenge details.",
+            variant: "destructive",
+        });
+        setLoading(false); // Stop loading if not logged in
+        return; // Don't fetch challenge data if not logged in
+    }
+
+    // Proceed to fetch data if logged in
     if (!challengeId) {
         setLoading(false);
         return;
@@ -95,7 +114,7 @@ export default function ChallengeDetailPage() {
     setChallenge(foundChallenge);
     setLoading(false);
 
-  }, [challengeId]);
+  }, [challengeId, router, toast]); // Add router, toast to dependencies
 
   if (loading) {
     return (
@@ -104,6 +123,26 @@ export default function ChallengeDetailPage() {
         </div>
     );
   }
+
+   if (!isLoggedIn) {
+       return (
+          <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/30 p-4">
+               <div className="text-center max-w-md bg-background p-8 rounded-lg shadow-lg border">
+                   <h1 className="text-2xl font-semibold mb-4">Access Denied</h1>
+                   <p className="text-muted-foreground mb-6">You need to be logged in to view challenge details.</p>
+                   <Button onClick={() => router.push('/login')} size="lg">
+                       <LogIn className="mr-2 h-5 w-5" /> Login to Continue
+                   </Button>
+                   <Button variant="link" size="sm" asChild className="mt-4">
+                       <Link href="/readers-club">
+                           <ArrowLeft className="mr-1 h-4 w-4" /> Back to Readers Club
+                       </Link>
+                   </Button>
+               </div>
+          </div>
+       );
+   }
+
 
   if (!challenge) {
     return (
@@ -209,7 +248,8 @@ export default function ChallengeDetailPage() {
                             <h3 className="mb-3 text-lg font-semibold">Required Reading</h3>
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                                 {challenge.requiredBooks.map(book => (
-                                    <SimpleBookCard key={book.id} book={book} className="w-full"/>
+                                    // Assume SimpleBookCard doesn't need login check here, as viewing is allowed
+                                    <SimpleBookCard key={book.id} book={book} className="w-full" isLoggedIn={true}/> // Pass true as user must be logged in to see this page
                                 ))}
                             </div>
                         </div>
@@ -255,4 +295,3 @@ export default function ChallengeDetailPage() {
     </div>
   );
 }
-

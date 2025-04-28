@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label'; // Import Label
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, Heart, MessageSquare, Share2, ExternalLink, FileText } from 'lucide-react'; // Replaced ThumbsUp with Heart
+import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, Heart, MessageSquare, Share2, ExternalLink, FileText, LogIn } from 'lucide-react'; // Replaced ThumbsUp with Heart, Added LogIn
 import { useToast } from '@/hooks/use-toast';
 import { generateSampleBooks } from '@/lib/mock-data'; // For finding book by ID in mock data
 import { StarRating } from '@/components/star-rating'; // Import StarRating
@@ -115,6 +115,8 @@ export default function BookDetailPage() {
   const [currentRating, setCurrentRating] = React.useState<number>(0);
   const [comment, setComment] = React.useState('');
   const [isLiked, setIsLiked] = React.useState(false); // State for like status
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false); // State for login status
+  const [isClient, setIsClient] = React.useState(false); // Track client mount
 
   // --- Mock Data Generation (Consistent per book) ---
   const mockReaderCount = React.useMemo(() => {
@@ -165,6 +167,12 @@ export default function BookDetailPage() {
 
   // --- Effects ---
   React.useEffect(() => {
+    setIsClient(true); // Mark as client-mounted
+    // Check login status on mount
+    // TODO: Replace with actual auth check
+    const userProfileExists = typeof window !== 'undefined' && localStorage.getItem('userProfile');
+    setIsLoggedIn(!!userProfileExists);
+
     if (bookId) {
       setLoading(true);
       // Reset state for potentially new book
@@ -179,25 +187,21 @@ export default function BookDetailPage() {
 
       if (foundBook) {
         setBook(foundBook);
-        // Load user-specific status/rating (prefer localStorage if book was found there, otherwise use foundBook data)
-        // The findBookById function already prioritizes localStorage, so we can directly use its result.
-        setCurrentStatus(foundBook.status);
-        setCurrentRating(foundBook.rating ?? 0);
-
-        // --- TODO: Load actual like status from user data ---
-        // For now, it remains false by default. In a real app, check if the user has liked this book.
-        // Example: const userLiked = await fetchUserLikeStatus(bookId); setIsLiked(userLiked);
-
+        // Load user-specific status/rating only if logged in
+        if (!!userProfileExists) {
+            setCurrentStatus(foundBook.status);
+            setCurrentRating(foundBook.rating ?? 0);
+             // --- TODO: Load actual like status from user data if logged in ---
+             // Example: const userLiked = await fetchUserLikeStatus(bookId); setIsLiked(userLiked);
+        } else {
+            // If not logged in, display the default status/rating from the book data if available
+            setCurrentStatus(foundBook.status); // Display status read-only
+            setCurrentRating(foundBook.rating ?? 0); // Display rating read-only
+        }
       } else {
          // Only show toast if book is genuinely not found after checking all sources
          console.warn(`Book with ID ${bookId} not found in localStorage or generated mock data.`);
-         // Avoid showing a disruptive toast, maybe handle this more gracefully
-         // For example, redirect back or show a dedicated "Not Found" state within the page
-         // toast({
-         //   title: "Book Not Found",
-         //   description: "Could not find the requested book.",
-         //   variant: "destructive",
-         // });
+         // Redirect or show not found state
       }
       setLoading(false);
     } else {
@@ -206,7 +210,24 @@ export default function BookDetailPage() {
   }, [bookId]); // Rerun when bookId changes
 
    // --- Actions ---
+   const showLoginToast = () => {
+        toast({
+            title: "Login Required",
+            description: "Please log in to perform this action.",
+            variant: "destructive",
+            action: (
+                <Button variant="outline" size="sm" onClick={() => router.push('/login')}>
+                    Login
+                </Button>
+            ),
+        });
+   }
+
    const updateBookInStorage = (updatedBook: Book) => {
+     if (!isLoggedIn) {
+         showLoginToast();
+         return;
+     }
      if (typeof window !== 'undefined') {
         const savedBooksRaw = localStorage.getItem('bookshelfBooks');
         let books: Book[] = [];
@@ -261,6 +282,10 @@ export default function BookDetailPage() {
 
    const handleStatusChange = (newStatus: ReadingStatus) => {
      if (!book) return;
+     if (!isLoggedIn) {
+         showLoginToast();
+         return;
+     }
 
      // Determine if it's a blank PDF book
      const isBlankPdfBook = !book.coverUrl && book.blankPdfUrl;
@@ -301,7 +326,13 @@ export default function BookDetailPage() {
    };
 
    const handleRatingChange = (newRating: number) => {
-     if (!book || currentStatus !== 'finished') {
+     if (!book) return;
+     if (!isLoggedIn) {
+         showLoginToast();
+         // Optionally revert the visual change in StarRating component if possible
+         return;
+     }
+     if (currentStatus !== 'finished') {
          toast({
             title: "Cannot Rate",
             description: "You can only rate books you have finished.",
@@ -352,6 +383,10 @@ export default function BookDetailPage() {
 
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isLoggedIn) {
+            showLoginToast();
+            return;
+        }
         if (!comment.trim()) return;
         console.log(`Submitting comment for book ${bookId}: ${comment}`);
         // --- TODO: Implement actual comment saving logic ---
@@ -363,6 +398,10 @@ export default function BookDetailPage() {
 
     // Handle Like Button Click
     const handleLikeClick = () => {
+        if (!isLoggedIn) {
+            showLoginToast();
+            return;
+        }
         const newLikedState = !isLiked;
         setIsLiked(newLikedState);
         setDisplayedLikeCount((prevCount) => newLikedState ? prevCount + 1 : prevCount - 1);
@@ -387,7 +426,7 @@ export default function BookDetailPage() {
 
 
   // --- Rendering ---
-  if (loading) {
+  if (loading || !isClient) { // Show loading until client is mounted and data is loaded
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <p className="text-lg text-muted-foreground">Loading book details...</p>
@@ -446,8 +485,15 @@ export default function BookDetailPage() {
               <div className="flex items-center justify-center bg-muted p-6 md:col-span-1 md:p-8">
                 <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded shadow-md">
                     {isBlankPdfBook ? (
-                         <Link href={book.blankPdfUrl || '#'} target="_blank" rel="noopener noreferrer" aria-label={`Open blank PDF for ${book.title}`} className="block h-full w-full">
-                           <div className="flex h-full w-full cursor-pointer items-center justify-center bg-muted hover:bg-muted/80 transition-colors">
+                         <Link
+                            href={isLoggedIn && book.blankPdfUrl ? book.blankPdfUrl : '#'}
+                            onClick={(e) => { if (!isLoggedIn) { e.preventDefault(); showLoginToast(); } }}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Open blank PDF for ${book.title}${!isLoggedIn ? ' (Login required)' : ''}`}
+                            className={cn("block h-full w-full", isLoggedIn ? "cursor-pointer" : "cursor-not-allowed")}
+                            >
+                           <div className="flex h-full w-full items-center justify-center bg-muted hover:bg-muted/80 transition-colors">
                               <FileText className="h-1/2 w-1/2 text-muted-foreground opacity-50" />
                            </div>
                          </Link>
@@ -475,25 +521,39 @@ export default function BookDetailPage() {
                    </div>
                    {/* Link to Blank PDF if applicable and NOT the main display */}
                     {isBlankPdfBook && book.blankPdfUrl && (
-                       <Button variant="outline" size="sm" asChild className="mt-4">
-                          <Link href={book.blankPdfUrl} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              Open Blank PDF
-                          </Link>
+                       <Button
+                            variant="outline"
+                            size="sm"
+                            asChild={isLoggedIn} // Use asChild only if logged in to make it a Link
+                            onClick={() => { if (!isLoggedIn) showLoginToast(); }}
+                            className="mt-4"
+                            disabled={!isLoggedIn} // Disable if not logged in
+                            >
+                            {isLoggedIn ? (
+                                <Link href={book.blankPdfUrl} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Open Blank PDF
+                                </Link>
+                            ) : (
+                                <>
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Open Blank PDF (Login Req.)
+                                </>
+                            )}
                        </Button>
                     )}
                  </CardHeader>
 
                  <CardContent className="flex-grow space-y-6 p-6 pt-0 md:p-8 md:pt-0">
-                    {/* User Rating */}
+                    {/* User Rating - Interactive only if logged in and finished */}
                     {displayStatus === 'finished' && (
                       <div>
                         <h3 className="mb-2 font-semibold text-foreground">My Rating</h3>
                         <StarRating
                             rating={currentRating} // Use state for current rating
-                            onRatingChange={handleRatingChange}
+                            onRatingChange={handleRatingChange} // Will check login inside
                             size={24}
-                            readOnly={false} // Allow rating when finished
+                            readOnly={!isLoggedIn} // Read-only if not logged in
                         />
                       </div>
                     )}
@@ -506,7 +566,7 @@ export default function BookDetailPage() {
                     )}
 
                     {/* User Notes (Display only, editing handled elsewhere) */}
-                   {book.notes && (
+                   {book.notes && isLoggedIn && ( // Only show notes if logged in
                       <div>
                          <h3 className="mb-2 font-semibold text-foreground">My Notes</h3>
                          <p className="whitespace-pre-wrap text-sm text-foreground/80">{book.notes}</p>
@@ -519,19 +579,20 @@ export default function BookDetailPage() {
                              <Users className="mr-1.5 h-4 w-4" />
                              <span>{mockReaderCount.toLocaleString()}</span>
                          </div>
-                         {/* Interactive Like Button */}
+                         {/* Interactive Like Button - Checks login on click */}
                          <Button
                              variant="ghost"
                              size="sm"
                              className={cn(
                                  "flex items-center px-2 py-1 -ml-2 text-muted-foreground hover:text-primary", // Adjust padding/margin
-                                 isLiked && "text-red-500 hover:text-red-600"
+                                 isLoggedIn && isLiked && "text-red-500 hover:text-red-600" // Only show red if logged in and liked
                              )}
                              onClick={handleLikeClick}
-                             title={isLiked ? "Unlike" : "Like"}
-                             aria-pressed={isLiked}
+                             title={isLoggedIn ? (isLiked ? "Unlike" : "Like") : "Log in to like"}
+                             aria-pressed={isLoggedIn && isLiked}
+                             disabled={!isClient} // Disable briefly until client mount confirms login status
                          >
-                             <Heart className={cn("mr-1.5 h-4 w-4 transition-colors", isLiked && "fill-current")} />
+                             <Heart className={cn("mr-1.5 h-4 w-4 transition-colors", isLoggedIn && isLiked && "fill-current")} />
                              <span>{displayedLikeCount.toLocaleString()}</span> {/* Use displayed count */}
                          </Button>
                          {/* Interactive Comment Icon Button */}
@@ -560,23 +621,30 @@ export default function BookDetailPage() {
 
                  {/* Actions Footer */}
                  <div className="mt-auto space-y-4 border-t bg-muted/50 p-4 md:p-6">
-                    {/* Status Management */}
-                    <div>
-                        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Manage Status</h3>
-                        <div className="flex flex-wrap gap-2">
-                           {/* Changed label for 'Reading' button */}
-                          <Button variant={displayStatus === 'reading' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('reading')}>
-                              <BookOpen className="mr-2 h-4 w-4" /> {isBlankPdfBook ? 'Read Now' : 'Reading'}
-                          </Button>
-                           <Button variant={displayStatus === 'finished' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('finished')}>
-                             <CheckCircle className="mr-2 h-4 w-4" /> Finished
-                          </Button>
-                          <Button variant={displayStatus === 'want-to-read' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('want-to-read')}>
-                             <Bookmark className="mr-2 h-4 w-4" /> Want to Read
-                          </Button>
+                    {/* Status Management - Only show if logged in */}
+                    {isLoggedIn ? (
+                        <div>
+                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Manage Status</h3>
+                            <div className="flex flex-wrap gap-2">
+                            <Button variant={displayStatus === 'reading' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('reading')}>
+                                <BookOpen className="mr-2 h-4 w-4" /> {isBlankPdfBook ? 'Read Now' : 'Reading'}
+                            </Button>
+                            <Button variant={displayStatus === 'finished' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('finished')}>
+                                <CheckCircle className="mr-2 h-4 w-4" /> Finished
+                            </Button>
+                            <Button variant={displayStatus === 'want-to-read' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('want-to-read')}>
+                                <Bookmark className="mr-2 h-4 w-4" /> Want to Read
+                            </Button>
+                            </div>
                         </div>
-                    </div>
-                    {/* Share Button */}
+                     ) : (
+                        <div className="text-center text-sm text-muted-foreground">
+                            <Button variant="outline" size="sm" onClick={() => router.push('/login')}>
+                                <LogIn className="mr-2 h-4 w-4" /> Log in to manage status
+                            </Button>
+                        </div>
+                     )}
+                    {/* Share Button - Always visible */}
                     <div>
                          <Button variant="outline" size="sm" onClick={handleShare} className="w-full sm:w-auto">
                              <Share2 className="mr-2 h-4 w-4" /> Share
@@ -596,7 +664,7 @@ export default function BookDetailPage() {
               <CardDescription>Share your thoughts or read what others are saying.</CardDescription>
            </CardHeader>
            <CardContent className="space-y-4">
-              {/* --- TODO: Replace Mock Comments with Actual Data Fetching & Rendering --- */}
+              {/* Mock Comments - Always visible */}
               <div className="space-y-4">
                  {/* Example Mock Comment 1 */}
                  <div className="flex items-start space-x-3">
@@ -629,21 +697,23 @@ export default function BookDetailPage() {
 
               <Separator className="my-6"/>
 
-              {/* Add Comment Form */}
+              {/* Add Comment Form - Only functional if logged in */}
               <form onSubmit={handleCommentSubmit} className="space-y-3">
                  <Label htmlFor="comment-input" className="font-semibold">Add your comment</Label>
                  <Textarea
                     id="comment-input"
-                    placeholder="Write your thoughts here..."
+                    placeholder={isLoggedIn ? "Write your thoughts here..." : "Log in to add a comment..."}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     rows={3}
                     className="resize-none"
-                    aria-label="Write your comment"
+                    aria-label={isLoggedIn ? "Write your comment" : "Log in to comment"}
+                    disabled={!isLoggedIn} // Disable if not logged in
                   />
                   <div className="flex justify-end">
-                     {/* TODO: Add loading state to button during submission */}
-                     <Button type="submit" size="sm" disabled={!comment.trim()}>Post Comment</Button>
+                     <Button type="submit" size="sm" disabled={!comment.trim() || !isLoggedIn}>
+                        {isLoggedIn ? 'Post Comment' : 'Log in to Post'}
+                    </Button>
                   </div>
               </form>
            </CardContent>

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, BookOpenCheck } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, LogIn } from 'lucide-react'; // Added LogIn
 import { useToast } from '@/hooks/use-toast';
 import type { Book } from '@/interfaces/book';
 
@@ -44,18 +44,36 @@ export default function UpdateChallengeProgressPage() {
   const { toast } = useToast();
   const challengeId = typeof params.id === 'string' ? params.id : '';
 
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true); // Loading state
   const [challengeTitle, setChallengeTitle] = React.useState<string>('');
   const [chapters, setChapters] = React.useState<{ bookTitle: string; bookId: string; chapters: { id: string; title: string }[] }[]>([]);
   const [checkedChapters, setCheckedChapters] = React.useState<Record<string, boolean>>({});
-  const [loading, setLoading] = React.useState(true);
+  // Removed internal loading state, use isLoading for auth check first
 
   React.useEffect(() => {
+    // Check login status on client mount
+    const userProfileExists = localStorage.getItem('userProfile');
+    const loggedIn = !!userProfileExists;
+    setIsLoggedIn(loggedIn);
+
+     if (!loggedIn) {
+        toast({
+            title: "Login Required",
+            description: "Please log in to update challenge progress.",
+            variant: "destructive",
+        });
+        setIsLoading(false); // Stop loading
+        return; // Don't fetch data if not logged in
+     }
+
+    // Proceed if logged in
     if (!challengeId) {
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true); // Start loading challenge data
     let foundChallenge: StoredChallenge | null = null;
 
     // --- Fetch challenge data (using localStorage for mock) ---
@@ -103,8 +121,8 @@ export default function UpdateChallengeProgressPage() {
        console.warn(`Challenge with ID ${challengeId} not found.`);
        toast({ title: "Challenge Not Found", variant: "destructive" });
     }
-    setLoading(false);
-  }, [challengeId, toast]);
+    setIsLoading(false); // Finish loading challenge data
+  }, [challengeId, toast, router]); // Add router to dependencies
 
   const handleCheckboxChange = (chapterId: string) => {
     setCheckedChapters(prev => ({
@@ -149,13 +167,31 @@ export default function UpdateChallengeProgressPage() {
     router.back(); // Go back to the challenge detail page
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
         <div className="flex min-h-screen items-center justify-center p-4">
             <p className="text-lg text-muted-foreground">Loading progress tracker...</p>
         </div>
     );
   }
+
+  if (!isLoggedIn) {
+      return (
+         <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/30 p-4">
+              <div className="text-center max-w-md bg-background p-8 rounded-lg shadow-lg border">
+                  <h1 className="text-2xl font-semibold mb-4">Access Denied</h1>
+                  <p className="text-muted-foreground mb-6">You need to be logged in to update challenge progress.</p>
+                  <Button onClick={() => router.push('/login')} size="lg">
+                      <LogIn className="mr-2 h-5 w-5" /> Login to Continue
+                  </Button>
+                  <Button variant="link" size="sm" onClick={() => router.back()} className="mt-4">
+                      <ArrowLeft className="mr-1 h-4 w-4" /> Back to Challenge Details
+                  </Button>
+              </div>
+         </div>
+      );
+  }
+
 
    if (!chapters || chapters.length === 0) {
     return (

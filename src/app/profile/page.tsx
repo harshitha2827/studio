@@ -32,7 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, ArrowLeft, User, Camera, Image as ImageIcon, Users, UserCheck } from 'lucide-react'; // Added Users, UserCheck
+import { CalendarIcon, ArrowLeft, User, Camera, Image as ImageIcon, Users, UserCheck, LogIn } from 'lucide-react'; // Added LogIn
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -63,7 +63,9 @@ const fetchUserData = (): ProfileFormValues => {
            const parsed = JSON.parse(storedData);
            // Ensure avatarUrl exists and dob is parsed correctly
            return {
-                ...parsed,
+                name: parsed.name || '', // Default to empty string if missing
+                username: parsed.username || '', // Default to empty string if missing
+                email: parsed.email || 'user@example.com', // Default email
                 dob: parsed.dob ? new Date(parsed.dob) : undefined,
                 avatarUrl: parsed.avatarUrl || '',
             };
@@ -72,7 +74,7 @@ const fetchUserData = (): ProfileFormValues => {
         }
      }
    }
-  // Default mock data if nothing is stored
+  // Default mock data if nothing is stored or error occurs
   return {
     name: 'Alex Doe',
     username: 'alex_doe',
@@ -102,18 +104,21 @@ const saveUserData = (data: ProfileFormValues) => {
 export default function ProfilePage() {
   const { toast } = useToast();
   const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true); // Loading state for auth check
+
+  // Fetch user data only if logged in
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: fetchUserData(), // Load initial data
+    defaultValues: {}, // Initialize empty, load data in useEffect
   });
 
-  const [imagePreview, setImagePreview] = React.useState<string | null>(form.getValues("avatarUrl"));
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
 
   // Watch name for fallback initials
   const userName = form.watch("name");
-
   // Watch avatarUrl for preview and error handling
   const watchedAvatarUrl = form.watch("avatarUrl");
 
@@ -121,6 +126,31 @@ export default function ProfilePage() {
   const [followerCount, setFollowerCount] = React.useState(Math.floor(Math.random() * 1000));
   const [followingCount, setFollowingCount] = React.useState(Math.floor(Math.random() * 500));
 
+  // Effect for checking login status and loading data
+  React.useEffect(() => {
+    // Check login status on client mount
+    const userProfileExists = localStorage.getItem('userProfile');
+    const loggedIn = !!userProfileExists;
+    setIsLoggedIn(loggedIn);
+
+    if (loggedIn) {
+        // Load user data if logged in
+        const userData = fetchUserData();
+        form.reset(userData); // Reset form with fetched data
+        setImagePreview(userData.avatarUrl || null);
+    } else {
+         toast({
+             title: "Login Required",
+             description: "Please log in to view your profile.",
+             variant: "destructive",
+         });
+         // Redirect if not logged in
+         // router.push('/login');
+    }
+    setIsLoading(false); // Finish loading check
+  }, [form, router, toast]); // Add form, router, toast to dependencies
+
+  // Effect for updating image preview when watchedAvatarUrl changes
   React.useEffect(() => {
       setImagePreview(watchedAvatarUrl);
   }, [watchedAvatarUrl]);
@@ -185,6 +215,37 @@ export default function ProfilePage() {
       .toUpperCase();
   };
 
+  // Render loading state
+  if (isLoading) {
+    return (
+        <div className="flex min-h-screen items-center justify-center p-4">
+            <p className="text-lg text-muted-foreground">Loading profile...</p>
+        </div>
+    );
+  }
+
+  // Render login prompt if not logged in
+  if (!isLoggedIn) {
+      return (
+         <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/50 p-4">
+              <div className="text-center max-w-md bg-background p-8 rounded-lg shadow-lg border">
+                  <h1 className="text-2xl font-semibold mb-4">Access Denied</h1>
+                  <p className="text-muted-foreground mb-6">You need to be logged in to view or edit your profile.</p>
+                  <Button onClick={() => router.push('/login')} size="lg">
+                      <LogIn className="mr-2 h-5 w-5" /> Login to Continue
+                  </Button>
+                  <Button variant="link" size="sm" asChild className="mt-4">
+                      <Link href="/">
+                          <ArrowLeft className="mr-1 h-4 w-4" /> Go Back Home
+                      </Link>
+                  </Button>
+              </div>
+         </div>
+      );
+  }
+
+
+  // Render profile page if logged in
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/50 p-4">
        {/* Hidden File Inputs */}
@@ -369,6 +430,7 @@ export default function ProfilePage() {
                             type="button"
                             variant="outline"
                             onClick={() => {
+                                // Reload default data for the logged-in user
                                 const defaultData = fetchUserData();
                                 form.reset(defaultData);
                                 setImagePreview(defaultData.avatarUrl); // Reset preview as well
@@ -387,4 +449,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

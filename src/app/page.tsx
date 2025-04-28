@@ -20,6 +20,7 @@ import { BookCategorySection } from "@/components/book-category-section"; // Imp
 import { generateSampleBooks } from '@/lib/mock-data'; // Import mock data generator
 import { Input } from "@/components/ui/input"; // Import Input component
 import { Chat } from '@/interfaces/chat'; // Import Chat interface
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 // Simple type for profile data needed here
 type UserProfile = {
@@ -41,29 +42,31 @@ export default function Home() {
   const [isClient, setIsClient] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState(''); // State for the search bar
   const { toast } = useToast();
+  const router = useRouter();
 
   React.useEffect(() => {
     // This effect runs only on the client after hydration
     setIsClient(true);
 
-    if (isLoggedIn) {
+    // TODO: Replace with actual auth check
+    // For now, we simulate based on profile presence in localStorage
+    const storedData = localStorage.getItem('userProfile');
+    const loggedIn = !!storedData; // Consider user logged in if profile exists
+    setIsLoggedIn(loggedIn);
+
+    if (loggedIn && storedData) {
        // Access localStorage only on the client
-       const storedData = localStorage.getItem('userProfile');
-       if (storedData) {
-            try {
-                const parsed: { name?: string; avatarUrl?: string; dob?: string } = JSON.parse(storedData);
-                setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl || '' });
-            } catch (e) {
-                 console.error("Failed to parse user profile from localStorage", e);
-                 setUserProfile({ name: 'User', avatarUrl: '' }); // Fallback
-            }
-       } else {
-            setUserProfile({ name: 'User', avatarUrl: '' }); // Default if logged in but no profile
+       try {
+           const parsed: { name?: string; avatarUrl?: string; dob?: string } = JSON.parse(storedData);
+           setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl || '' });
+       } catch (e) {
+            console.error("Failed to parse user profile from localStorage", e);
+            setUserProfile({ name: 'User', avatarUrl: '' }); // Fallback
        }
     } else {
-        setUserProfile(null);
+        setUserProfile(null); // Not logged in or no profile
     }
-  }, [isLoggedIn]); // Rerun if login state changes
+  }, []); // Run only once on mount
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -101,6 +104,21 @@ export default function Home() {
         });
    };
 
+   // Function to handle navigation, checks login status for protected routes
+   const navigate = (path: string) => {
+       if (!isLoggedIn) {
+           toast({
+               title: "Login Required",
+               description: "Please log in to access this feature.",
+               variant: "destructive",
+           });
+           router.push('/login');
+       } else {
+           router.push(path);
+       }
+   };
+
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
@@ -137,40 +155,19 @@ export default function Home() {
                 <span className="sr-only">Search</span>
             </Button>
 
-            {/* Readers Club Button */}
-            <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
-                <Link href="/readers-club" aria-label="Readers Club">
-                    <Users className="h-5 w-5" />
-                </Link>
-            </Button>
-             <Button asChild variant="ghost" size="icon" className="sm:hidden">
-                <Link href="/readers-club" aria-label="Readers Club">
-                    <Users className="h-5 w-5" />
-                </Link>
+            {/* Readers Club Button - Use navigate function */}
+            <Button variant="ghost" size="icon" onClick={() => navigate('/readers-club')} aria-label="Readers Club">
+                <Users className="h-5 w-5" />
             </Button>
 
-             {/* Chat Button */}
-             <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
-                 <Link href="/chat" aria-label="Chat">
-                     <MessageSquare className="h-5 w-5" />
-                 </Link>
-             </Button>
-              <Button asChild variant="ghost" size="icon" className="sm:hidden">
-                 <Link href="/chat" aria-label="Chat">
-                     <MessageSquare className="h-5 w-5" />
-                 </Link>
-             </Button>
+             {/* Chat Button - Use navigate function */}
+            <Button variant="ghost" size="icon" onClick={() => navigate('/chat')} aria-label="Chat">
+                 <MessageSquare className="h-5 w-5" />
+            </Button>
 
-            {/* Bookshelf Button */}
-             <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
-               <Link href="/bookshelf" aria-label="My Bookshelf">
-                 <BookMarked className="h-5 w-5" />
-               </Link>
-             </Button>
-             <Button asChild variant="ghost" size="icon" className="sm:hidden">
-               <Link href="/bookshelf" aria-label="My Bookshelf">
-                 <BookMarked className="h-5 w-5" />
-               </Link>
+            {/* Bookshelf Button - Use navigate function */}
+             <Button variant="ghost" size="icon" onClick={() => navigate('/bookshelf')} aria-label="My Bookshelf">
+               <BookMarked className="h-5 w-5" />
              </Button>
 
 
@@ -192,10 +189,11 @@ export default function Home() {
                       <DropdownMenuLabel>{userProfile.name || 'My Account'}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link href="/profile">
+                        {/* Use navigate function for profile link */}
+                        <button onClick={() => navigate('/profile')} className="flex items-center w-full">
                           <User className="mr-2 h-4 w-4" />
                           <span>Profile Details</span>
-                        </Link>
+                        </button>
                       </DropdownMenuItem>
                       <DropdownMenuItem disabled className="cursor-not-allowed">
                         <History className="mr-2 h-4 w-4" />
@@ -227,18 +225,18 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1 container mx-auto px-4 py-8 space-y-12">
 
-        {/* Book Discovery Sections - Use the pre-generated consistent data and pass slugs */}
-        <BookCategorySection title="Trending Books" books={trendingBooks} slug="trending" />
-        <BookCategorySection title="Popular Books" books={popularBooks} slug="popular" />
-        <BookCategorySection title="Top 100 (Sample)" books={top100Books} slug="top-100" />
+        {/* Book Discovery Sections - Pass isLoggedIn state */}
+        <BookCategorySection title="Trending Books" books={trendingBooks} slug="trending" isLoggedIn={isLoggedIn} />
+        <BookCategorySection title="Popular Books" books={popularBooks} slug="popular" isLoggedIn={isLoggedIn}/>
+        <BookCategorySection title="Top 100 (Sample)" books={top100Books} slug="top-100" isLoggedIn={isLoggedIn} />
 
       </main>
 
-       {/* Optional Footer (Consider adding later if needed) */}
+       {/* Optional Footer */}
        {/*
        <footer className="mt-auto border-t bg-muted/40 py-4">
          <div className="container text-center text-sm text-muted-foreground">
-            BookBurst © {new Date().getFullYear()} // Updated Name in potential footer
+            BookBurst © {new Date().getFullYear()}
          </div>
        </footer>
        */}

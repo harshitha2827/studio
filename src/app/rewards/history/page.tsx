@@ -7,11 +7,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, History, TrendingUp, TrendingDown, Gift } from 'lucide-react';
+import { ArrowLeft, History, TrendingUp, TrendingDown, Gift, LogIn } from 'lucide-react'; // Added LogIn
 import { format } from 'date-fns';
 import type { RewardTransaction } from '@/interfaces/reward'; // Import RewardTransaction type
 import { cn } from '@/lib/utils';
 import { generateSampleTransactions } from '@/lib/mock-data'; // Import mock data generator
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 // Interface for hydrated transaction data with Date objects
 interface HydratedTransaction extends Omit<RewardTransaction, 'timestamp'> {
@@ -21,11 +22,30 @@ interface HydratedTransaction extends Omit<RewardTransaction, 'timestamp'> {
 
 export default function RewardHistoryPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true); // Loading state
   const [transactions, setTransactions] = React.useState<HydratedTransaction[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  // Removed internal loading state, use isLoading
 
   React.useEffect(() => {
-    setLoading(true);
+    // Check login status on client mount
+    const userProfileExists = localStorage.getItem('userProfile');
+    const loggedIn = !!userProfileExists;
+    setIsLoggedIn(loggedIn);
+
+    if (!loggedIn) {
+        toast({
+            title: "Login Required",
+            description: "Please log in to view your points history.",
+            variant: "destructive",
+        });
+        setIsLoading(false); // Stop loading
+        return; // Don't fetch data if not logged in
+    }
+
+    // Proceed if logged in
+    setIsLoading(true); // Start loading transactions
     let loadedTransactions: HydratedTransaction[] = [];
 
     // --- Fetch transaction data (using localStorage for mock) ---
@@ -60,10 +80,37 @@ export default function RewardHistoryPage() {
     // --- End Fetch ---
 
     setTransactions(loadedTransactions);
-    setLoading(false);
+    setIsLoading(false); // Finish loading transactions
 
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, [router, toast]); // Empty dependency array ensures this runs once on mount, add router/toast
 
+    if (isLoading) {
+     return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <p className="text-lg text-muted-foreground">Loading history...</p>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+      return (
+         <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/30 p-4">
+              <div className="text-center max-w-md bg-background p-8 rounded-lg shadow-lg border">
+                  <h1 className="text-2xl font-semibold mb-4">Access Denied</h1>
+                  <p className="text-muted-foreground mb-6">You need to be logged in to view your points history.</p>
+                  <Button onClick={() => router.push('/login')} size="lg">
+                      <LogIn className="mr-2 h-5 w-5" /> Login to Continue
+                  </Button>
+                   <Button variant="link" size="sm" onClick={() => router.back()} className="mt-4">
+                      <ArrowLeft className="mr-1 h-4 w-4" /> Back to Rewards
+                  </Button>
+              </div>
+         </div>
+      );
+  }
+
+
+  // Render history page only if logged in
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
         {/* Header */}
@@ -89,9 +136,7 @@ export default function RewardHistoryPage() {
                     <CardDescription>View your recent point earnings and spending.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {loading ? (
-                        <div className="text-center py-12 text-muted-foreground">Loading history...</div>
-                    ) : transactions.length > 0 ? (
+                    {transactions.length > 0 ? (
                         <Table>
                             <TableHeader>
                                 <TableRow>

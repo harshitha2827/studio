@@ -5,7 +5,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Button, buttonVariants } from '@/components/ui/button'; // Import buttonVariants
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BookOpen, CalendarDays, MessageSquare, Target, Trophy, Users, UserCheck, Star } from 'lucide-react'; // Added Star icon
+import { ArrowLeft, BookOpen, CalendarDays, MessageSquare, Target, Trophy, Users, UserCheck, Star, LogIn } from 'lucide-react'; // Added Star icon, Added LogIn
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SimpleBookCard } from '@/components/simple-book-card'; // For displaying books
 import { generateSampleBooks } from '@/lib/mock-data'; // For mock data
@@ -21,6 +21,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { cn } from '@/lib/utils'; // Import cn
+import { useRouter } from 'next/navigation'; // Import useRouter
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 
 // --- Enhanced Mock Data (Could be moved to a separate file later) ---
@@ -138,12 +140,31 @@ const mockDiscussionPosts = [
 export const mockRewardBalance = 175; // Export for use in rewards page
 
 export default function ReadersClubPage() {
+    const router = useRouter();
+    const { toast } = useToast();
+    const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(true); // Loading state
     const [discussionPost, setDiscussionPost] = React.useState('');
     const [isClient, setIsClient] = React.useState(false); // State to track client mount
 
     React.useEffect(() => {
         setIsClient(true); // Set client state to true once mounted
-    }, []);
+        // Check login status on client mount
+        const userProfileExists = localStorage.getItem('userProfile');
+        const loggedIn = !!userProfileExists;
+        setIsLoggedIn(loggedIn);
+        setIsLoading(false); // Finish loading check
+
+        if (!loggedIn) {
+            toast({
+                title: "Login Required",
+                description: "Please log in to access the Readers Club.",
+                variant: "destructive",
+            });
+            // Optionally redirect
+            // router.push('/login');
+        }
+    }, [router, toast]);
 
     const handlePostSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -163,7 +184,34 @@ export default function ReadersClubPage() {
         }
     };
 
+    if (isLoading) {
+     return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <p className="text-lg text-muted-foreground">Checking login status...</p>
+      </div>
+    );
+    }
 
+    if (!isLoggedIn) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/30 p-4">
+                 <div className="text-center max-w-md bg-background p-8 rounded-lg shadow-lg border">
+                     <h1 className="text-2xl font-semibold mb-4">Access Denied</h1>
+                     <p className="text-muted-foreground mb-6">You need to be logged in to join the Readers Club.</p>
+                     <Button onClick={() => router.push('/login')} size="lg">
+                         <LogIn className="mr-2 h-5 w-5" /> Login to Continue
+                     </Button>
+                     <Button variant="link" size="sm" asChild className="mt-4">
+                         <Link href="/">
+                             <ArrowLeft className="mr-1 h-4 w-4" /> Go Back Home
+                         </Link>
+                     </Button>
+                 </div>
+            </div>
+        );
+    }
+
+  // Render Readers Club page only if logged in
   return (
     <TooltipProvider> {/* Wrap the page with TooltipProvider */}
       <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -229,7 +277,7 @@ export default function ReadersClubPage() {
                {mockCurrentlyReading.length > 0 ? (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                       {mockCurrentlyReading.map(book => (
-                          <SimpleBookCard key={book.id} book={book} className="w-full"/>
+                          <SimpleBookCard key={book.id} book={book} className="w-full" isLoggedIn={isLoggedIn}/> // Pass isLoggedIn
                       ))}
                   </div>
               ) : (

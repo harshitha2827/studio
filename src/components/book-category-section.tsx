@@ -11,9 +11,10 @@ interface BookCategorySectionProps {
   title: string;
   books: Book[];
   slug: string; // Add slug prop for linking
+  isLoggedIn: boolean; // Add isLoggedIn prop
 }
 
-export function BookCategorySection({ title, books, slug }: BookCategorySectionProps) {
+export function BookCategorySection({ title, books, slug, isLoggedIn }: BookCategorySectionProps) {
   return (
     <section className="space-y-4">
        {/* Wrap the Button with Link */}
@@ -35,6 +36,7 @@ export function BookCategorySection({ title, books, slug }: BookCategorySectionP
                 key={book.id}
                 book={book}
                 className="w-[100px] sm:w-[120px] flex-shrink-0" // Reduced width further
+                isLoggedIn={isLoggedIn} // Pass isLoggedIn down
               />
             ))}
            </div>
