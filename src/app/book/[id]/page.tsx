@@ -12,16 +12,83 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label'; // Import Label
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, ThumbsUp, MessageSquare, Share2, ExternalLink } from 'lucide-react'; // Added ExternalLink
+import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, ThumbsUp, MessageSquare, Share2, ExternalLink, FileText } from 'lucide-react'; // Added FileText
 import { useToast } from '@/hooks/use-toast';
 import { generateSampleBooks } from '@/lib/mock-data'; // For finding book by ID in mock data
 import { StarRating } from '@/components/star-rating'; // Import StarRating
 
-// Helper to find a book by ID from a sample list (replace with actual data fetching)
+// --- Helper to find a book by ID ---
+// Define known seeds used across the app for generating initial mock data sets
+const knownSeeds = ['trending', 'popular', 'top-100', 'bookshelf-initial'];
+// Define a reasonable number of books to generate per seed for the lookup process
+const booksPerSeedLookup = 100; // Adjust if needed, balances lookup scope vs performance
+
 const findBookById = (id: string): Book | undefined => {
-  const allSampleBooks = generateSampleBooks(500, 'bookDetail'); // Use a consistent seed
-  return allSampleBooks.find(book => book.id === id);
+  // 1. Prioritize checking localStorage (most accurate source for user-added/modified books)
+  if (typeof window !== 'undefined') {
+    const savedBooksRaw = localStorage.getItem('bookshelfBooks');
+    if (savedBooksRaw) {
+      try {
+        const books: Book[] = JSON.parse(savedBooksRaw).map((b: any) => ({
+          ...b,
+          addedDate: new Date(b.addedDate),
+          blankPdfUrl: b.blankPdfUrl || undefined, // Ensure field exists
+        }));
+        const userBookData = books.find(b => b.id === id);
+        if (userBookData) {
+          // If found in localStorage, return this version immediately
+          return userBookData;
+        }
+      } catch (e) {
+        console.error("Failed to parse books from localStorage during lookup:", e);
+        // Continue to mock data lookup if localStorage fails
+      }
+    }
+  }
+
+  // 2. If not in localStorage, search through generated mock data from known seeds
+  const allSampleBooksMap = new Map<string, Book>();
+
+  // Generate books for known fixed categories/seeds
+  knownSeeds.forEach(seed => {
+    const books = generateSampleBooks(booksPerSeedLookup, seed);
+    books.forEach(book => {
+      // Add to map only if not already present (avoids duplicates if seeds overlap)
+      if (!allSampleBooksMap.has(book.id)) {
+        allSampleBooksMap.set(book.id, book);
+      }
+    });
+  });
+
+  // Check if the book is already found in the map from known seeds
+  if (allSampleBooksMap.has(id)) {
+    return allSampleBooksMap.get(id);
+  }
+
+  // 3. If still not found, try deducing seed from ID (for dynamic category pages)
+  const idParts = id.split('-');
+  if (idParts.length > 1) {
+    const potentialSeed = idParts.slice(0, -1).join('-'); // Handle seeds like 'sci-fi'
+    // Avoid regenerating if seed is already known or invalid
+    if (potentialSeed && !knownSeeds.includes(potentialSeed)) {
+      // Generate books specifically for this potential seed
+      const categoryBooks = generateSampleBooks(booksPerSeedLookup, potentialSeed);
+      categoryBooks.forEach(book => {
+        if (!allSampleBooksMap.has(book.id)) {
+          allSampleBooksMap.set(book.id, book);
+        }
+      });
+      // Check the map again after adding books from the deduced seed
+      if (allSampleBooksMap.has(id)) {
+        return allSampleBooksMap.get(id);
+      }
+    }
+  }
+
+  // 4. If not found after all attempts, return undefined
+  return undefined;
 };
+
 
 // Mock function to get initials for avatars
 const getInitials = (name: string | undefined): string => {
@@ -50,31 +117,29 @@ export default function BookDetailPage() {
   // --- Mock Data Generation (Consistent per book) ---
   const mockReaderCount = React.useMemo(() => {
       if (!bookId) return 100;
-      return Math.floor(pseudoRandom(bookId.hashCode()) * 5000) + 100;
+      // Use a simple hash function for pseudo-randomness based on ID
+      let hash = 0;
+      for (let i = 0; i < bookId.length; i++) {
+        const char = bookId.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Convert to 32bit integer
+      }
+      return Math.abs(hash % 5000) + 100; // Ensure positive number > 100
   }, [bookId]);
+
   const mockLikeCount = React.useMemo(() => {
       if (!bookId) return 20;
-       return Math.floor(mockReaderCount * (pseudoRandom(bookId.hashCode() + 1) * 0.5 + 0.2));
+      // Base likes on reader count for some correlation
+       let hash = 0;
+       for (let i = 0; i < bookId.length; i++) {
+         const char = bookId.charCodeAt(i);
+         hash = ((hash << 5) - hash) + char + 1; // Slightly different hash
+         hash |= 0;
+       }
+       const likeRatio = (Math.abs(hash % 31) + 20) / 100; // Random ratio between 0.2 and 0.5
+       return Math.floor(mockReaderCount * likeRatio);
   }, [mockReaderCount, bookId]);
 
-  // Simple hash function for pseudo-random generation
-  function pseudoRandom(seed: number): number {
-      let x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-  }
-  // Ensure String.prototype.hashCode is defined globally
-  if (typeof String.prototype.hashCode === 'undefined') {
-      String.prototype.hashCode = function() {
-        var hash = 0, i, chr;
-        if (this.length === 0) return hash;
-        for (i = 0; i < this.length; i++) {
-          chr   = this.charCodeAt(i);
-          hash  = ((hash << 5) - hash) + chr;
-          hash |= 0;
-        }
-        return hash;
-      };
-  }
 
   // --- Effects ---
   React.useEffect(() => {
@@ -86,45 +151,32 @@ export default function BookDetailPage() {
       setCurrentRating(0);
       setComment('');
 
-      // Simulate fetching book data
+      // Simulate fetching book data using the updated findBookById
       const foundBook = findBookById(bookId);
+
       if (foundBook) {
         setBook(foundBook);
-        // Load user-specific status/rating from localStorage
-        if (typeof window !== 'undefined') {
-            const savedBooksRaw = localStorage.getItem('bookshelfBooks');
-            if (savedBooksRaw) {
-                try {
-                    const books: Book[] = JSON.parse(savedBooksRaw).map((b: any) => ({
-                        ...b,
-                        addedDate: new Date(b.addedDate),
-                    }));
-                    const userBookData = books.find(b => b.id === foundBook.id);
-                    setCurrentStatus(userBookData?.status ?? foundBook.status);
-                    setCurrentRating(userBookData?.rating ?? foundBook.rating ?? 0);
-                } catch (e) {
-                     console.error("Failed to parse books from localStorage:", e);
-                     setCurrentStatus(foundBook.status);
-                     setCurrentRating(foundBook.rating ?? 0);
-                }
-            } else {
-                 setCurrentStatus(foundBook.status);
-                 setCurrentRating(foundBook.rating ?? 0);
-            }
-        } else {
-            setCurrentStatus(foundBook.status);
-            setCurrentRating(foundBook.rating ?? 0);
-        }
+        // Load user-specific status/rating (prefer localStorage if book was found there, otherwise use foundBook data)
+        // The findBookById function already prioritizes localStorage, so we can directly use its result.
+        setCurrentStatus(foundBook.status);
+        setCurrentRating(foundBook.rating ?? 0);
+
       } else {
-        toast({
-          title: "Book Not Found",
-          description: "Could not find the requested book.",
-          variant: "destructive",
-        });
+         // Only show toast if book is genuinely not found after checking all sources
+         console.warn(`Book with ID ${bookId} not found in localStorage or generated mock data.`);
+         // Avoid showing a disruptive toast, maybe handle this more gracefully
+         // For example, redirect back or show a dedicated "Not Found" state within the page
+         // toast({
+         //   title: "Book Not Found",
+         //   description: "Could not find the requested book.",
+         //   variant: "destructive",
+         // });
       }
       setLoading(false);
+    } else {
+        setLoading(false); // No ID, stop loading
     }
-  }, [bookId, toast]);
+  }, [bookId, toast]); // Rerun when bookId changes
 
    // --- Actions ---
    const updateBookInStorage = (updatedBook: Book) => {
@@ -136,6 +188,7 @@ export default function BookDetailPage() {
                 books = JSON.parse(savedBooksRaw).map((b: any) => ({
                     ...b,
                     addedDate: new Date(b.addedDate),
+                    blankPdfUrl: b.blankPdfUrl || undefined, // Ensure field exists
                 }));
            } catch (e) {
                console.error("Failed to parse books from localStorage for update:", e);
@@ -147,30 +200,33 @@ export default function BookDetailPage() {
         const existingIndex = books.findIndex(b => b.id === updatedBook.id);
         if (existingIndex > -1) {
              const preservedAddedDate = books[existingIndex].addedDate;
-             // Preserve the blankPdfUrl from the original record if it exists
+             // Preserve the blankPdfUrl from the original record if it exists and isn't being explicitly changed
              const preservedPdfUrl = books[existingIndex].blankPdfUrl;
              books[existingIndex] = {
                 ...updatedBook,
-                addedDate: preservedAddedDate,
-                blankPdfUrl: updatedBook.blankPdfUrl ?? preservedPdfUrl // Ensure it's preserved
+                addedDate: preservedAddedDate, // Keep original added date
+                blankPdfUrl: updatedBook.blankPdfUrl ?? preservedPdfUrl // Ensure it's preserved or updated
              };
         } else {
-             // Add as a new book, potentially with a default blankPdfUrl
+             // Add as a new book if somehow it wasn't found before (e.g., added via details page)
              books.push({
                 ...updatedBook,
-                addedDate: new Date(),
+                addedDate: new Date(), // Assign current date as added date
                 // Use the URL from the new book data, or the placeholder if missing
-                blankPdfUrl: updatedBook.blankPdfUrl || "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token" // Add default here too
+                blankPdfUrl: updatedBook.blankPdfUrl || "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token"
             });
         }
 
+        // Prepare for saving: Convert Date objects to ISO strings
         const booksToSave = books.map(b => ({
            ...b,
            addedDate: b.addedDate instanceof Date && !isNaN(b.addedDate.getTime())
                       ? b.addedDate.toISOString()
                       : new Date().toISOString(),
-           // Ensure blankPdfUrl is included in the saved data
-           blankPdfUrl: b.blankPdfUrl || undefined, // Store undefined if empty string or null
+           // Ensure blankPdfUrl is included in the saved data, store undefined if empty/null
+           blankPdfUrl: b.blankPdfUrl || undefined,
+           // Ensure rating is undefined if not 'finished'
+           rating: b.status === 'finished' ? (b.rating ?? 0) : undefined,
         }));
         localStorage.setItem('bookshelfBooks', JSON.stringify(booksToSave));
      }
@@ -178,17 +234,26 @@ export default function BookDetailPage() {
 
    const handleStatusChange = (newStatus: ReadingStatus) => {
      if (!book) return;
+
+     // Optimistically update UI state
      setCurrentStatus(newStatus);
-     const newRating = newStatus === 'finished' ? currentRating : undefined;
+     const newRating = newStatus === 'finished' ? currentRating : undefined; // Reset rating if not finished
+     if (newStatus !== 'finished') setCurrentRating(0); // Clear rating state if not finished
+
      const updatedBookData: Book = {
        ...book,
        status: newStatus,
        rating: newRating,
-       // Preserve existing blankPdfUrl
+       // Preserve existing blankPdfUrl unless explicitly changed elsewhere
        blankPdfUrl: book.blankPdfUrl,
      };
-     setBook(prevBook => ({ ...prevBook!, status: newStatus, rating: newRating }));
+
+     // Update the book object in local state for immediate UI feedback
+     setBook(updatedBookData);
+
+     // Persist change to localStorage
      updateBookInStorage(updatedBookData);
+
      toast({
        title: `Book marked as '${newStatus.replace('-', ' ')}'`,
        description: `${book.title} status updated.`,
@@ -202,18 +267,26 @@ export default function BookDetailPage() {
             description: "You can only rate books you have finished.",
             variant: "destructive"
          });
+         // Revert rating state if needed, though StarRating might handle this
+         // setCurrentRating(book.rating ?? 0); // Or keep previous valid rating
          return;
      }
-     setCurrentRating(newRating);
+     setCurrentRating(newRating); // Update local state for rating display
+
      const updatedBookData: Book = {
        ...book,
-       status: currentStatus,
+       status: currentStatus, // Keep current status ('finished')
        rating: newRating,
        // Preserve existing blankPdfUrl
        blankPdfUrl: book.blankPdfUrl,
      };
-     setBook(prevBook => ({ ...prevBook!, rating: newRating }));
+
+     // Update the book object in local state
+     setBook(updatedBookData);
+
+     // Persist change to localStorage
      updateBookInStorage(updatedBookData);
+
      toast({
        title: `Rated ${newRating} stars`,
        description: `Your rating for ${book.title} has been saved.`,
@@ -241,8 +314,10 @@ export default function BookDetailPage() {
         e.preventDefault();
         if (!comment.trim()) return;
         console.log(`Submitting comment for book ${bookId}: ${comment}`);
+        // --- TODO: Implement actual comment saving logic ---
+        // This would typically involve sending the comment to a backend/database
         toast({ title: "Comment Added", description: "Your comment has been posted (simulation)." });
-        setComment('');
+        setComment(''); // Clear comment input after submission
     };
 
   // --- Rendering ---
@@ -250,21 +325,40 @@ export default function BookDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <p className="text-lg text-muted-foreground">Loading book details...</p>
+        {/* Optionally add a spinner */}
       </div>
     );
   }
 
   if (!book) {
+    // Render a more informative "Not Found" state within the page layout
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
-         <Button variant="ghost" size="sm" onClick={() => router.back()} className="absolute top-4 left-4">
-             <ArrowLeft className="mr-2 h-4 w-4" /> Back
-         </Button>
-        <p className="text-center text-lg text-muted-foreground">Book not found.</p>
+      <div className="flex min-h-screen flex-col bg-secondary/30">
+         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-16 items-center">
+                <Button variant="ghost" size="sm" onClick={() => router.back()} aria-label="Go back">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <h1 className="ml-4 truncate text-lg font-semibold">Book Not Found</h1>
+            </div>
+         </header>
+         <main className="container mx-auto max-w-4xl flex-1 px-4 py-8">
+             <Card className="text-center shadow-lg">
+                 <CardHeader>
+                     <CardTitle>Oops! Book Not Found</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                     <p className="text-muted-foreground">We couldn't find the book you were looking for (ID: {bookId}).</p>
+                     <p className="mt-2 text-sm text-muted-foreground">It might have been removed or the link might be incorrect.</p>
+                     <Button onClick={() => router.push('/')} className="mt-6">Go to Home</Button>
+                 </CardContent>
+             </Card>
+         </main>
       </div>
     );
   }
 
+  // Ensure status is derived from the current state
   const displayStatus = currentStatus ?? book.status;
   const isBlankPdfBook = !book.coverUrl && book.blankPdfUrl;
 
@@ -286,9 +380,11 @@ export default function BookDetailPage() {
               <div className="flex items-center justify-center bg-muted p-6 md:col-span-1 md:p-8">
                 <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded shadow-md">
                     {isBlankPdfBook ? (
-                        <div className="flex h-full w-full items-center justify-center bg-muted">
-                           <FileText className="h-1/2 w-1/2 text-muted-foreground opacity-50" />
-                        </div>
+                         <Link href={book.blankPdfUrl || '#'} target="_blank" rel="noopener noreferrer" aria-label={`Open blank PDF for ${book.title}`} className="block h-full w-full">
+                           <div className="flex h-full w-full cursor-pointer items-center justify-center bg-muted hover:bg-muted/80 transition-colors">
+                              <FileText className="h-1/2 w-1/2 text-muted-foreground opacity-50" />
+                           </div>
+                         </Link>
                     ) : (
                        <Image
                            src={book.coverUrl || `https://picsum.photos/seed/${book.id}/300/400`}
@@ -296,7 +392,7 @@ export default function BookDetailPage() {
                            fill
                            sizes="(max-width: 768px) 80vw, 30vw"
                            className="object-cover"
-                           priority
+                           priority // Prioritize loading the main book cover
                         />
                     )}
                 </div>
@@ -311,7 +407,7 @@ export default function BookDetailPage() {
                        {book.pageCount && <span>{book.pageCount} pages</span>}
                        {book.isbn && <span>ISBN: {book.isbn}</span>}
                    </div>
-                   {/* Link to Blank PDF if applicable */}
+                   {/* Link to Blank PDF if applicable and NOT the main display */}
                     {isBlankPdfBook && book.blankPdfUrl && (
                        <Button variant="outline" size="sm" asChild className="mt-4">
                           <Link href={book.blankPdfUrl} target="_blank" rel="noopener noreferrer">
@@ -328,14 +424,14 @@ export default function BookDetailPage() {
                       <div>
                         <h3 className="mb-2 font-semibold text-foreground">My Rating</h3>
                         <StarRating
-                            rating={currentRating}
+                            rating={currentRating} // Use state for current rating
                             onRatingChange={handleRatingChange}
                             size={24}
-                            readOnly={displayStatus !== 'finished'}
+                            readOnly={false} // Allow rating when finished
                         />
-                         {displayStatus !== 'finished' && <p className="mt-1 text-xs text-muted-foreground">Mark as 'Finished' to rate.</p>}
                       </div>
                     )}
+                    {/* Show read-only last rating if not finished but has one */}
                     {displayStatus !== 'finished' && book.rating !== undefined && book.rating > 0 && (
                         <div>
                             <h3 className="mb-2 font-semibold text-foreground">Last Rating</h3>
@@ -343,7 +439,7 @@ export default function BookDetailPage() {
                         </div>
                     )}
 
-                    {/* User Notes */}
+                    {/* User Notes (Display only, editing handled elsewhere) */}
                    {book.notes && (
                       <div>
                          <h3 className="mb-2 font-semibold text-foreground">My Notes</h3>
@@ -353,17 +449,17 @@ export default function BookDetailPage() {
 
                     {/* Engagement Stats */}
                     <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                        <div className="flex items-center" title={`${mockReaderCount} Readers`}>
+                        <div className="flex items-center" title={`${mockReaderCount.toLocaleString()} Readers`}>
                             <Users className="mr-1.5 h-4 w-4" />
                             <span>{mockReaderCount.toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center" title={`${mockLikeCount} Likes`}>
+                        <div className="flex items-center" title={`${mockLikeCount.toLocaleString()} Likes`}>
                             <ThumbsUp className="mr-1.5 h-4 w-4" />
                              <span>{mockLikeCount.toLocaleString()}</span>
                         </div>
                          <div className="flex items-center" title={`View Comments`}>
                              <MessageSquare className="mr-1.5 h-4 w-4" />
-                              <span>{/* TODO: Actual comment count */}</span>
+                              <span>{/* TODO: Implement actual comment count */}</span>
                          </div>
                     </div>
 
@@ -413,31 +509,35 @@ export default function BookDetailPage() {
               <CardDescription>Share your thoughts or read what others are saying.</CardDescription>
            </CardHeader>
            <CardContent className="space-y-4">
-              {/* Mock Comments List */}
+              {/* --- TODO: Replace Mock Comments with Actual Data Fetching & Rendering --- */}
               <div className="space-y-4">
+                 {/* Example Mock Comment 1 */}
                  <div className="flex items-start space-x-3">
                     <Avatar className="h-8 w-8 border">
+                        {/* Use a deterministic avatar based on user + book */}
                         <AvatarImage src={`https://i.pravatar.cc/40?u=user1_${bookId}`} alt="User 1" />
                         <AvatarFallback>{getInitials('User One')}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 rounded-md border bg-muted/30 p-3">
                         <p className="text-sm font-medium text-foreground">BookLover123</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Absolutely loved this book!</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Absolutely loved this book! The characters were so well-developed.</p>
                         <p className="mt-1 text-xs text-muted-foreground/70">2 days ago</p>
                     </div>
                  </div>
                  <Separator />
+                  {/* Example Mock Comment 2 */}
                  <div className="flex items-start space-x-3">
                      <Avatar className="h-8 w-8 border">
-                        <AvatarImage src={`https://i.pravatar.cc/40?u=user2_${bookId}`} alt="User 2" />
+                         <AvatarImage src={`https://i.pravatar.cc/40?u=user2_${bookId}`} alt="User 2" />
                         <AvatarFallback>{getInitials('Reader Dude')}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 rounded-md border bg-muted/30 p-3">
                         <p className="text-sm font-medium text-foreground">ReaderDude</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Solid read!</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Solid read! The plot twist near the end caught me by surprise.</p>
                          <p className="mt-1 text-xs text-muted-foreground/70">1 week ago</p>
                     </div>
                  </div>
+                  {/* Add more comments or pagination controls here */}
               </div>
 
               <Separator className="my-6"/>
@@ -455,6 +555,7 @@ export default function BookDetailPage() {
                     aria-label="Write your comment"
                   />
                   <div className="flex justify-end">
+                     {/* TODO: Add loading state to button during submission */}
                      <Button type="submit" size="sm" disabled={!comment.trim()}>Post Comment</Button>
                   </div>
               </form>
@@ -463,25 +564,4 @@ export default function BookDetailPage() {
       </main>
     </div>
   );
-}
-
-// Extend String prototype for simple hashCode if not already present globally
-declare global {
-    interface String {
-        hashCode(): number;
-    }
-}
-
-// Conditional definition moved here, outside component body
-if (typeof String.prototype.hashCode === 'undefined') {
-    String.prototype.hashCode = function() {
-        var hash = 0, i, chr;
-        if (this.length === 0) return hash;
-        for (i = 0; i < this.length; i++) {
-          chr   = this.charCodeAt(i);
-          hash  = ((hash << 5) - hash) + chr;
-          hash |= 0; // Convert to 32bit integer
-        }
-        return hash;
-    };
 }
