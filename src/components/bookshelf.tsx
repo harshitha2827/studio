@@ -16,15 +16,16 @@ import { DialogTrigger } from "@/components/ui/dialog"; // Need DialogTrigger fo
 
 const BOOKSHELF_TAB_COOKIE = "bookshelf_last_tab";
 
-// Sample Books Data
+// Sample Books Data - Expanded to 15 books
 const sampleBooks: Book[] = [
+  // Existing 5 books
   {
     id: "1",
     title: "To Kill a Mockingbird",
     author: "Harper Lee",
     status: "finished",
     rating: 5,
-    addedDate: new Date("2023-01-15"),
+    addedDate: new Date("2023-01-15T10:00:00Z"),
     notes: "A classic for a reason. Atticus Finch is an inspiring character.",
     coverUrl: "https://picsum.photos/seed/mockingbird/300/400",
     isbn: "978-0061120084",
@@ -34,7 +35,7 @@ const sampleBooks: Book[] = [
     title: "1984",
     author: "George Orwell",
     status: "reading",
-    addedDate: new Date("2023-03-10"),
+    addedDate: new Date("2023-03-10T11:00:00Z"),
     notes: "Thought-provoking and slightly terrifying.",
     coverUrl: "https://picsum.photos/seed/1984/300/400",
     isbn: "978-0451524935",
@@ -44,7 +45,7 @@ const sampleBooks: Book[] = [
     title: "The Great Gatsby",
     author: "F. Scott Fitzgerald",
     status: "want-to-read",
-    addedDate: new Date("2023-05-20"),
+    addedDate: new Date("2023-05-20T12:00:00Z"),
     coverUrl: "https://picsum.photos/seed/gatsby/300/400",
     isbn: "978-0743273565",
   },
@@ -54,7 +55,7 @@ const sampleBooks: Book[] = [
     author: "Frank Herbert",
     status: "finished",
     rating: 4,
-    addedDate: new Date("2023-02-28"),
+    addedDate: new Date("2023-02-28T13:00:00Z"),
     notes: "Incredible world-building, a bit dense at times.",
     coverUrl: "https://picsum.photos/seed/dune/300/400",
     isbn: "978-0441172719",
@@ -64,10 +65,109 @@ const sampleBooks: Book[] = [
     title: "Atomic Habits",
     author: "James Clear",
     status: "reading",
-    addedDate: new Date("2023-06-01"),
+    addedDate: new Date("2023-06-01T14:00:00Z"),
     notes: "Practical advice on building good habits.",
     coverUrl: "https://picsum.photos/seed/habits/300/400",
     isbn: "978-0735211292",
+  },
+  // Adding 10 more books
+  {
+    id: "6",
+    title: "Sapiens: A Brief History of Humankind",
+    author: "Yuval Noah Harari",
+    status: "finished",
+    rating: 5,
+    addedDate: new Date("2023-07-15T09:30:00Z"),
+    notes: "Mind-blowing perspective on human history.",
+    coverUrl: "https://picsum.photos/seed/sapiens/300/400",
+    isbn: "978-0062316097",
+  },
+  {
+    id: "7",
+    title: "Project Hail Mary",
+    author: "Andy Weir",
+    status: "reading",
+    addedDate: new Date("2023-08-01T15:00:00Z"),
+    coverUrl: "https://picsum.photos/seed/hailmary/300/400",
+    isbn: "978-0593135204",
+  },
+  {
+    id: "8",
+    title: "The Midnight Library",
+    author: "Matt Haig",
+    status: "want-to-read",
+    addedDate: new Date("2023-08-10T10:00:00Z"),
+    coverUrl: "https://picsum.photos/seed/library/300/400",
+    isbn: "978-0525559474",
+  },
+  {
+    id: "9",
+    title: "Educated",
+    author: "Tara Westover",
+    status: "finished",
+    rating: 4,
+    addedDate: new Date("2023-04-05T16:00:00Z"),
+    notes: "Incredible and inspiring memoir.",
+    coverUrl: "https://picsum.photos/seed/educated/300/400",
+    isbn: "978-0399590504",
+  },
+  {
+    id: "10",
+    title: "Where the Crawdads Sing",
+    author: "Delia Owens",
+    status: "finished",
+    rating: 3,
+    addedDate: new Date("2023-09-01T11:00:00Z"),
+    coverUrl: "https://picsum.photos/seed/crawdads/300/400",
+    isbn: "978-0735219090",
+  },
+  {
+    id: "11",
+    title: "The Alchemist",
+    author: "Paulo Coelho",
+    status: "want-to-read",
+    addedDate: new Date("2023-09-15T14:30:00Z"),
+    coverUrl: "https://picsum.photos/seed/alchemist/300/400",
+    isbn: "978-0062315007",
+  },
+  {
+    id: "12",
+    title: "Thinking, Fast and Slow",
+    author: "Daniel Kahneman",
+    status: "reading",
+    addedDate: new Date("2023-10-01T12:00:00Z"),
+    notes: "Fascinating insights into cognitive biases.",
+    coverUrl: "https://picsum.photos/seed/thinking/300/400",
+    isbn: "978-0374533557",
+  },
+  {
+    id: "13",
+    title: "Circe",
+    author: "Madeline Miller",
+    status: "finished",
+    rating: 5,
+    addedDate: new Date("2023-10-20T09:00:00Z"),
+    notes: "Beautiful retelling of Greek mythology.",
+    coverUrl: "https://picsum.photos/seed/circe/300/400",
+    isbn: "978-1408710196",
+  },
+  {
+    id: "14",
+    title: "The Silent Patient",
+    author: "Alex Michaelides",
+    status: "want-to-read",
+    addedDate: new Date("2023-11-05T17:00:00Z"),
+    coverUrl: "https://picsum.photos/seed/patient/300/400",
+    isbn: "978-1250301697",
+  },
+  {
+    id: "15",
+    title: "Becoming",
+    author: "Michelle Obama",
+    status: "reading",
+    addedDate: new Date("2023-11-15T13:45:00Z"),
+    coverUrl: "https://picsum.photos/seed/becoming/300/400",
+    isbn: "978-1524763138",
   },
 ];
 
@@ -83,20 +183,21 @@ export function Bookshelf() {
             const parsedBooks = JSON.parse(savedBooks);
             // Check if parsedBooks is an array and not empty
             if (Array.isArray(parsedBooks) && parsedBooks.length > 0) {
+                // Sort loaded books by addedDate descending
                 return parsedBooks.map((book: any) => ({
-                ...book,
-                addedDate: new Date(book.addedDate), // Convert string back to Date
-                }));
+                    ...book,
+                    addedDate: new Date(book.addedDate), // Convert string back to Date
+                })).sort((a: Book, b: Book) => b.addedDate.getTime() - a.addedDate.getTime());
             }
           } catch (e) {
             console.error("Failed to parse books from localStorage:", e);
-            // Fall through to returning sample books if parsing fails or data is invalid
+            // Fall through to returning sorted sample books if parsing fails or data is invalid
           }
         }
-        // If no saved books or parsing failed, return sample books
+        // If no saved books or parsing failed, return sorted sample books
         return sampleBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime());
      }
-     // If window is not defined (SSR), return empty array or sample books
+     // If window is not defined (SSR), return sorted sample books
      return sampleBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Or return [] if you prefer empty on SSR
   });
   const [editingBook, setEditingBook] = React.useState<Book | null>(null);
@@ -142,8 +243,9 @@ export function Bookshelf() {
         updatedBooks[existingIndex] = book;
         return updatedBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Maintain sort on update
       } else {
-        // Add new book
-        return [...prevBooks, book].sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Keep sorted by added date desc
+        // Add new book with current date as addedDate
+        const newBook = { ...book, addedDate: new Date() };
+        return [...prevBooks, newBook].sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Keep sorted by added date desc
       }
     });
     setEditingBook(null); // Clear editing state
