@@ -16,6 +16,62 @@ import { DialogTrigger } from "@/components/ui/dialog"; // Need DialogTrigger fo
 
 const BOOKSHELF_TAB_COOKIE = "bookshelf_last_tab";
 
+// Sample Books Data
+const sampleBooks: Book[] = [
+  {
+    id: "1",
+    title: "To Kill a Mockingbird",
+    author: "Harper Lee",
+    status: "finished",
+    rating: 5,
+    addedDate: new Date("2023-01-15"),
+    notes: "A classic for a reason. Atticus Finch is an inspiring character.",
+    coverUrl: "https://picsum.photos/seed/mockingbird/300/400",
+    isbn: "978-0061120084",
+  },
+  {
+    id: "2",
+    title: "1984",
+    author: "George Orwell",
+    status: "reading",
+    addedDate: new Date("2023-03-10"),
+    notes: "Thought-provoking and slightly terrifying.",
+    coverUrl: "https://picsum.photos/seed/1984/300/400",
+    isbn: "978-0451524935",
+  },
+  {
+    id: "3",
+    title: "The Great Gatsby",
+    author: "F. Scott Fitzgerald",
+    status: "want-to-read",
+    addedDate: new Date("2023-05-20"),
+    coverUrl: "https://picsum.photos/seed/gatsby/300/400",
+    isbn: "978-0743273565",
+  },
+   {
+    id: "4",
+    title: "Dune",
+    author: "Frank Herbert",
+    status: "finished",
+    rating: 4,
+    addedDate: new Date("2023-02-28"),
+    notes: "Incredible world-building, a bit dense at times.",
+    coverUrl: "https://picsum.photos/seed/dune/300/400",
+    isbn: "978-0441172719",
+  },
+  {
+    id: "5",
+    title: "Atomic Habits",
+    author: "James Clear",
+    status: "reading",
+    addedDate: new Date("2023-06-01"),
+    notes: "Practical advice on building good habits.",
+    coverUrl: "https://picsum.photos/seed/habits/300/400",
+    isbn: "978-0735211292",
+  },
+];
+
+
 export function Bookshelf() {
   const [books, setBooks] = React.useState<Book[]>(() => {
      // Load books from localStorage on initial render
@@ -25,17 +81,23 @@ export function Bookshelf() {
         if (savedBooks) {
           try {
             const parsedBooks = JSON.parse(savedBooks);
-            return parsedBooks.map((book: any) => ({
-              ...book,
-              addedDate: new Date(book.addedDate), // Convert string back to Date
-            }));
+            // Check if parsedBooks is an array and not empty
+            if (Array.isArray(parsedBooks) && parsedBooks.length > 0) {
+                return parsedBooks.map((book: any) => ({
+                ...book,
+                addedDate: new Date(book.addedDate), // Convert string back to Date
+                }));
+            }
           } catch (e) {
             console.error("Failed to parse books from localStorage:", e);
-            return [];
+            // Fall through to returning sample books if parsing fails or data is invalid
           }
         }
+        // If no saved books or parsing failed, return sample books
+        return sampleBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime());
      }
-     return [];
+     // If window is not defined (SSR), return empty array or sample books
+     return sampleBooks.sort((a,b) => b.addedDate.getTime() - a.addedDate.getTime()); // Or return [] if you prefer empty on SSR
   });
   const [editingBook, setEditingBook] = React.useState<Book | null>(null);
   const [bookToDelete, setBookToDelete] = React.useState<string | null>(null);
@@ -229,3 +291,4 @@ export function Bookshelf() {
     </div>
   );
 }
+
