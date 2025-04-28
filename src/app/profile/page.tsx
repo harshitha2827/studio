@@ -133,12 +133,13 @@ export default function ProfilePage() {
     const loggedIn = !!userProfileExists;
     setIsLoggedIn(loggedIn);
 
-    if (loggedIn) {
+     if (loggedIn) {
         // Load user data if logged in
         const userData = fetchUserData();
         form.reset(userData); // Reset form with fetched data
         setImagePreview(userData.avatarUrl || null);
         // TODO: In a real app, fetch actual follower/following counts here
+        // For now, they remain 0 as initialized above
     } else {
          toast({
              title: "Login Required",
