@@ -20,13 +20,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          "min-h-screen bg-background font-sans antialiased",
+          "min-h-screen bg-background font-sans antialiased", // Removed fixed height classes
           inter.variable
         )}
       >
-        <div className="relative flex min-h-screen flex-col">
-          <div className="flex-1">{children}</div>
-        </div>
+        {/* Removed outer div structure that might constrain height */}
+        {children}
         <Toaster /> {/* Add Toaster for notifications */}
       </body>
     </html>
