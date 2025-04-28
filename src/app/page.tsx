@@ -74,6 +74,12 @@ export default function Home() {
     // Access localStorage only on the client
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userProfile');
+      // Optionally clear other related storage
+      localStorage.removeItem('bookshelfBooks');
+      localStorage.removeItem('mockChallenges');
+      localStorage.removeItem('mockRewardTransactions');
+      // Clear cookie
+       document.cookie = "bookshelf_last_tab=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
     }
     toast({
       title: "Logged Out",
@@ -106,13 +112,22 @@ export default function Home() {
 
    // Function to handle navigation, checks login status for protected routes
    const navigate = (path: string) => {
+       // Use isClient flag to ensure this only runs client-side
+       if (!isClient) return; // Don't navigate during SSR or before hydration
+
        if (!isLoggedIn) {
            toast({
                title: "Login Required",
                description: "Please log in to access this feature.",
                variant: "destructive",
+               action: (
+                  <Button variant="outline" size="sm" onClick={() => router.push('/login')}>
+                     Login
+                  </Button>
+               ),
            });
-           router.push('/login');
+           // Consider redirecting immediately after toast or let user click action
+           // router.push('/login');
        } else {
            router.push(path);
        }
@@ -130,7 +145,7 @@ export default function Home() {
                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v16H6.5a2.5 2.5 0 0 1 0-5H20"></path>
                </svg>
-               <span className="inline-block font-bold">BookBurst</span> {/* Updated Name */}
+               <span className="inline-block font-bold">BookShelfie</span> {/* Updated Name */}
              </Link>
 
              {/* Search Bar */}
@@ -217,7 +232,7 @@ export default function Home() {
                 )
               )}
               {/* Placeholder during SSR/initial render before client check */}
-              {!isClient && <div className="h-9 w-9 rounded-full bg-muted"></div>}
+              {!isClient && <div className="h-9 w-9 rounded-full bg-muted animate-pulse"></div>}
           </div>
         </div>
       </header>
@@ -236,7 +251,7 @@ export default function Home() {
        {/*
        <footer className="mt-auto border-t bg-muted/40 py-4">
          <div className="container text-center text-sm text-muted-foreground">
-            BookBurst © {new Date().getFullYear()}
+            BookShelfie © {new Date().getFullYear()}
          </div>
        </footer>
        */}

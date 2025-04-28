@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link'; // Import Link for navigation
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -35,6 +36,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -46,18 +48,39 @@ export default function LoginPage() {
   const onSubmit = (data: LoginFormValues) => {
     // Placeholder for actual login logic
     console.log('Login attempt with:', data.email); // Avoid logging password
+
+    // --- TODO: Implement actual authentication ---
+    // 1. Send `data.email` and `data.password` to your backend/auth provider.
+    // 2. Handle the response:
+    //    - On success: Store the user session/token (e.g., in cookies or localStorage)
+    //                 Store minimal profile data (name, avatarUrl) in localStorage for quick UI updates.
+    //                 Redirect to the home page or intended destination.
+    //    - On failure: Show an appropriate error toast.
+
+    // **Mock Success Simulation:**
+    // For demonstration, we'll simulate a successful login and save mock data.
+    const mockUserProfile = {
+      name: 'Mock User',
+      email: data.email,
+      username: data.email.split('@')[0], // Create a simple username
+      avatarUrl: '', // Default or generate a mock avatar
+      dob: null, // Or a mock date
+    };
+    localStorage.setItem('userProfile', JSON.stringify(mockUserProfile));
+
     toast({
-      title: 'Login Submitted',
-      description: 'Login functionality is not yet implemented.',
+      title: 'Login Successful',
+      description: 'Welcome back! Redirecting...',
     });
-    // In a real app, you would call an authentication service here
+    // In a real app, redirect after successful auth confirmation
+    router.push('/');
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Login to BookBurst</CardTitle> {/* Updated Name */}
+          <CardTitle className="text-2xl">Login to BookShelfie</CardTitle> {/* Updated Name */}
           <CardDescription>
             Enter your email below to login to your account
           </CardDescription>
@@ -95,8 +118,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Login
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
               </Button>
             </form>
           </Form>

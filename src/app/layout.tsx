@@ -7,8 +7,8 @@ import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" }); // Setup Inter font
 
 export const metadata: Metadata = {
-  title: "BookBurst", // Updated app title
-  description: "Your personal reading log and discovery platform.", // Updated description
+  title: "BookShelfie", // Changed from BookBurst to BookShelfie
+  description: "Your personal reading log and discovery platform.",
 };
 
 export default function RootLayout({

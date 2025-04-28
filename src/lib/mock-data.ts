@@ -2,6 +2,12 @@
 import type { Book, ReadingStatus } from "@/interfaces/book";
 import type { RewardTransaction, TransactionType } from "@/interfaces/reward"; // Import Reward types
 
+// --- !!! IMPORTANT: Replace this placeholder URL !!! ---
+// This MUST match the placeholder URL used in add-book-form.tsx and bookshelf.tsx
+// Upload your blank PDF to Firebase Storage and paste the Download URL here.
+// Example: const placeholderBlankPdfUrl = "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token";
+const placeholderBlankPdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+
 /**
  * Generates a list of sample books for demonstration purposes.
  * Ensures deterministic output based on the seed prefix.
@@ -18,12 +24,6 @@ export const generateSampleBooks = (count: number, seedPrefix: string): Book[] =
     let x = Math.sin(seed) * 10000;
     return x - Math.floor(x);
   }
-
-   // --- !!! IMPORTANT: Replace this placeholder URL !!! ---
-   // Upload your blank PDF to Firebase Storage and paste the Download URL here.
-   const placeholderBlankPdfUrl = "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token";
-   // If you don't have one yet, you can use a public sample PDF for testing:
-   // const placeholderBlankPdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 
 
   for (let i = 1; i <= count; i++) {

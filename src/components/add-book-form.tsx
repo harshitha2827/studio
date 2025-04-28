@@ -41,9 +41,9 @@ import { PlusCircle } from "lucide-react";
 // --- !!! IMPORTANT: Replace this placeholder URL !!! ---
 // This default URL will be used if a book being edited doesn't already have one.
 // Upload your blank PDF to Firebase Storage and paste the Download URL here.
-const placeholderBlankPdfUrl = "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token";
-// Public sample PDF for testing:
-// const placeholderBlankPdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+// Example: const placeholderBlankPdfUrl = "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token";
+// Public sample PDF for testing (replace later):
+const placeholderBlankPdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 
 const bookSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -114,6 +114,7 @@ export function AddBookForm({ onBookSave, initialBook, isOpen, setIsOpen }: AddB
       // Only include rating if status is 'finished'
       rating: data.status === 'finished' ? data.rating : undefined,
       // Preserve existing blankPdfUrl if editing, otherwise use the placeholder
+      // IMPORTANT: This assumes the placeholder is set correctly above.
       blankPdfUrl: initialBook?.blankPdfUrl || placeholderBlankPdfUrl,
       // Preserve other potential fields not directly in the form
       pageCount: initialBook?.pageCount,

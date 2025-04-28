@@ -54,14 +54,28 @@ export default function SignupPage() {
     // Placeholder for actual signup logic
     console.log('Signup attempt with:', { email: data.email }); // Avoid logging password
 
-    // Simulate successful signup
-    // In a real app, you would call an authentication service here
-    // and handle potential errors (e.g., email already exists)
+    // --- TODO: Implement actual signup ---
+    // 1. Send `data.email` and `data.password` to your backend/auth provider.
+    // 2. Handle the response:
+    //    - On success: Log the user in immediately (store session/token)
+    //                 Create a basic profile in localStorage (or fetch from backend)
+    //                 Redirect to home page.
+    //    - On failure (e.g., email exists): Show an error toast.
 
+    // **Mock Success Simulation:**
+    // For demonstration, we'll simulate a successful signup and save mock data.
+    const mockUserProfile = {
+      name: `User_${data.email.split('@')[0]}`, // Create a simple name
+      email: data.email,
+      username: data.email.split('@')[0], // Create a simple username
+      avatarUrl: '', // Default avatar
+      dob: null,
+    };
+    localStorage.setItem('userProfile', JSON.stringify(mockUserProfile));
     // Show success toast
     toast({
       title: 'Signup Successful',
-      description: 'Welcome! Redirecting you to your bookshelf...',
+      description: 'Welcome! Redirecting you to the home page...',
     });
 
     // Redirect to home page after a short delay to allow toast visibility
@@ -76,7 +90,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your email and password to sign up for BookBurst {/* Updated Name */}
+            Enter your email and password to sign up for BookShelfie {/* Updated Name */}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -143,6 +143,11 @@ export default function ProfilePage() {
              title: "Login Required",
              description: "Please log in to view your profile.",
              variant: "destructive",
+              action: (
+                  <Button variant="outline" size="sm" onClick={() => router.push('/login')}>
+                      Login
+                  </Button>
+              ),
          });
          // Redirect if not logged in
          // router.push('/login');
@@ -220,6 +225,7 @@ export default function ProfilePage() {
     return (
         <div className="flex min-h-screen items-center justify-center p-4">
             <p className="text-lg text-muted-foreground">Loading profile...</p>
+             {/* Optional: Add a spinner */}
         </div>
     );
   }
@@ -271,7 +277,7 @@ export default function ProfilePage() {
             size="icon"
             className="absolute top-4 left-4 text-muted-foreground hover:text-foreground z-10"
             onClick={() => router.push('/')}
-            aria-label="Back to BookBurst" /* Updated Label */
+            aria-label="Back to BookShelfie" /* Updated Label */
           >
            <ArrowLeft className="h-5 w-5" />
          </Button>

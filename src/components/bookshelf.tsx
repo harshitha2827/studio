@@ -20,6 +20,13 @@ const DEFAULT_TAB: ReadingStatus = 'want-to-read'; // Define default tab
 // Generate initial books consistently
 const initialBooks = generateSampleBooks(20, 'bookshelf-initial');
 
+// --- !!! IMPORTANT: Replace this placeholder URL !!! ---
+// This MUST match the placeholder URL used in add-book-form.tsx
+// Upload your blank PDF to Firebase Storage and paste the Download URL here.
+// Example: const placeholderBlankPdfUrl = "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token";
+const placeholderBlankPdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+
+
 export function Bookshelf() {
   const [books, setBooks] = React.useState<Book[]>(initialBooks); // Start with generated initial state
   const [isClient, setIsClient] = React.useState(false); // State to track client-side mount
@@ -47,7 +54,8 @@ export function Bookshelf() {
            const loadedBooks = parsedBooks.map((book: any) => ({
              ...book,
              addedDate: new Date(book.addedDate), // Ensure date objects
-             blankPdfUrl: book.blankPdfUrl || undefined, // Ensure field exists
+             // Ensure field exists, fallback to the placeholder if missing during load
+             blankPdfUrl: book.blankPdfUrl || placeholderBlankPdfUrl,
            })).sort((a: Book, b: Book) => {
                 // Use the same sorting logic as mock-data generator
                 const [prefixA, numA] = a.id.split('-');
@@ -70,7 +78,8 @@ export function Bookshelf() {
          const initialBooksToSave = initialBooks.map(book => ({
             ...book,
             addedDate: book.addedDate.toISOString(),
-            blankPdfUrl: book.blankPdfUrl || undefined, // Include blankPdfUrl
+            // Ensure placeholder is used here as well
+            blankPdfUrl: book.blankPdfUrl || placeholderBlankPdfUrl,
          }));
          localStorage.setItem('bookshelfBooks', JSON.stringify(initialBooksToSave));
          setBooks(initialBooks); // Explicitly set state back to initial
@@ -80,7 +89,8 @@ export function Bookshelf() {
         const initialBooksToSave = initialBooks.map(book => ({
             ...book,
             addedDate: book.addedDate.toISOString(),
-            blankPdfUrl: book.blankPdfUrl || undefined, // Include blankPdfUrl
+            // Ensure placeholder is used when initializing
+            blankPdfUrl: book.blankPdfUrl || placeholderBlankPdfUrl,
         }));
         localStorage.setItem('bookshelfBooks', JSON.stringify(initialBooksToSave));
         setBooks(initialBooks); // Ensure state is the initial set
@@ -100,7 +110,8 @@ export function Bookshelf() {
       const booksToSave = books.map(book => ({
         ...book,
         addedDate: book.addedDate instanceof Date ? book.addedDate.toISOString() : new Date().toISOString(), // Ensure date is valid ISO string
-        blankPdfUrl: book.blankPdfUrl || undefined, // Ensure blankPdfUrl is saved
+        // Ensure blankPdfUrl is saved, fallback to placeholder if somehow missing
+        blankPdfUrl: book.blankPdfUrl || placeholderBlankPdfUrl,
       }));
       localStorage.setItem('bookshelfBooks', JSON.stringify(booksToSave));
      }
@@ -127,7 +138,7 @@ export function Bookshelf() {
             ...book, // Overwrite with the new data from the form
             addedDate: prevBooks[existingIndex].addedDate, // explicitly keep original addedDate
             // Ensure blankPdfUrl is carried over correctly
-            blankPdfUrl: book.blankPdfUrl ?? prevBooks[existingIndex].blankPdfUrl,
+            blankPdfUrl: book.blankPdfUrl ?? prevBooks[existingIndex].blankPdfUrl ?? placeholderBlankPdfUrl,
         };
       } else {
         // Add new book with current date as addedDate
@@ -135,8 +146,8 @@ export function Bookshelf() {
             ...book,
             addedDate: new Date(),
             id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, // Ensure new ID
-             // Use the URL from the new book data or a default if missing
-            blankPdfUrl: book.blankPdfUrl || "https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/blank.pdf?alt=media&token=your-token" // Add default here too
+             // Use the URL from the new book data or the placeholder if missing
+            blankPdfUrl: book.blankPdfUrl || placeholderBlankPdfUrl
         };
         updatedBooks = [...prevBooks, newBook];
       }
