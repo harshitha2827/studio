@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast"; // Import useToast hook
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
 import { BookCategorySection } from "@/components/book-category-section"; // Import the new component
+import { generateSampleBooks } from '@/lib/mock-data'; // Import mock data generator
 
 // Simple type for profile data needed here
 type UserProfile = {
@@ -24,48 +25,11 @@ type UserProfile = {
   avatarUrl?: string; // Can be a URL or a data URI
 };
 
-// --- Mock Data Generation (Moved outside component to prevent hydration mismatch) ---
-// IMPORTANT: In a real app, this data would come from an API
-const generateSampleBooks = (count: number, seedPrefix: string): Book[] => {
-  const books: Book[] = [];
-  const baseDate = new Date("2023-01-01").getTime(); // Use a fixed base date for reproducibility
-  // Use a simple pseudo-random number generator for consistency if needed, or just predictable data
-  let pseudoRandom = 1;
-  const pseudoRandomNext = () => {
-    const x = Math.sin(pseudoRandom++) * 10000;
-    return x - Math.floor(x);
-  }
-
-
-  for (let i = 1; i <= count; i++) {
-     // Use pseudo-random or predictable values instead of Math.random()
-     const randomOffset = pseudoRandomNext() * (new Date().getTime() - baseDate);
-     const randomDate = new Date(baseDate + randomOffset);
-     const status: ReadingStatus = 'want-to-read'; // Consistent status for demo
-     const hasCover = (i % 10 !== 0); // Predictable cover assignment (e.g., 90%)
-     const authorNum = Math.floor(i / 5) + 1; // Predictable author
-
-    books.push({
-      // Use predictable IDs - combining prefix and index should be sufficient for mock data
-      id: `${seedPrefix}-${i}`,
-      title: `${seedPrefix} Book ${i}`,
-      author: `Author ${authorNum}`,
-      status: status,
-      addedDate: randomDate, // Date can vary, but generation logic is now deterministic per seed
-      coverUrl: hasCover ? `https://picsum.photos/seed/${seedPrefix}${i}/300/400` : `https://picsum.photos/seed/defaultBook/300/400`, // Consistent URL generation
-      // ISBN generation can remain somewhat random for visuals, but avoid Date.now()
-      isbn: `978-0-${Math.floor(pseudoRandomNext() * 100000000).toString().padStart(8, '0')}-${i % 10}`,
-    });
-  }
-  // Consistent sorting
-  return books.sort((a, b) => b.addedDate.getTime() - a.addedDate.getTime());
-};
 
 // Generate the data once at module load time
-const trendingBooks = generateSampleBooks(15, 'Trending');
-const popularBooks = generateSampleBooks(15, 'Popular');
-const top100Books = generateSampleBooks(15, 'Top100'); // Showing first 15 of top 100 for brevity
-// --- End Mock Data Generation ---
+const trendingBooks = generateSampleBooks(15, 'trending'); // Use slug as seed prefix
+const popularBooks = generateSampleBooks(15, 'popular'); // Use slug as seed prefix
+const top100Books = generateSampleBooks(15, 'top-100'); // Use slug as seed prefix
 
 
 export default function Home() {
@@ -211,10 +175,10 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1 container mx-auto px-4 py-8 space-y-12">
 
-        {/* Book Discovery Sections - Use the pre-generated consistent data */}
-        <BookCategorySection title="Trending Books" books={trendingBooks} />
-        <BookCategorySection title="Popular Books" books={popularBooks} />
-        <BookCategorySection title="Top 100 (Sample)" books={top100Books} />
+        {/* Book Discovery Sections - Use the pre-generated consistent data and pass slugs */}
+        <BookCategorySection title="Trending Books" books={trendingBooks} slug="trending" />
+        <BookCategorySection title="Popular Books" books={popularBooks} slug="popular" />
+        <BookCategorySection title="Top 100 (Sample)" books={top100Books} slug="top-100" />
 
          {/* Bookshelf component is no longer rendered here */}
       </main>
