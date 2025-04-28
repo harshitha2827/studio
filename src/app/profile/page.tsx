@@ -122,9 +122,9 @@ export default function ProfilePage() {
   // Watch avatarUrl for preview and error handling
   const watchedAvatarUrl = form.watch("avatarUrl");
 
-  // Mock follower/following counts
-  const [followerCount, setFollowerCount] = React.useState(Math.floor(Math.random() * 1000));
-  const [followingCount, setFollowingCount] = React.useState(Math.floor(Math.random() * 500));
+  // Mock follower/following counts - Reset to 0
+  const [followerCount, setFollowerCount] = React.useState(0);
+  const [followingCount, setFollowingCount] = React.useState(0);
 
   // Effect for checking login status and loading data
   React.useEffect(() => {
@@ -138,6 +138,7 @@ export default function ProfilePage() {
         const userData = fetchUserData();
         form.reset(userData); // Reset form with fetched data
         setImagePreview(userData.avatarUrl || null);
+        // TODO: In a real app, fetch actual follower/following counts here
     } else {
          toast({
              title: "Login Required",
@@ -455,3 +456,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
