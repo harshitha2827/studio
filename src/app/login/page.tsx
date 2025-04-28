@@ -51,9 +51,12 @@ export default function LoginPage() {
     // --- Implement actual authentication using localStorage ---
     if (typeof window !== 'undefined') {
         // 1. Retrieve stored user data based on email
-        const storedUserRaw = localStorage.getItem(`user_${data.email}`);
+        const storageKey = `user_${data.email}`;
+        const storedUserRaw = localStorage.getItem(storageKey);
+        console.log(`Checking localStorage key: ${storageKey}`); // Debugging
 
         if (!storedUserRaw) {
+            console.log('No user data found for this email.'); // Debugging
             toast({
                 title: 'Login Failed',
                 description: 'Invalid email or password.',
@@ -64,18 +67,22 @@ export default function LoginPage() {
 
         try {
             const storedUserData = JSON.parse(storedUserRaw);
+            console.log('Stored user data found:', storedUserData); // Debugging
 
             // 2. Compare entered password with stored password (Insecure!)
-            if (storedUserData.password === data.password) {
+            if (storedUserData.password && storedUserData.password === data.password) {
                 // --- Success ---
+                console.log('Password match successful.'); // Debugging
                 // 3. Create and store the basic profile to simulate session
+                 // Ensure all necessary fields are present, falling back to stored data
                 const userProfile = {
-                    name: storedUserData.username, // Use stored username as initial name
-                    email: storedUserData.email,
-                    username: storedUserData.username,
-                    avatarUrl: '', // Load actual avatar later if stored separately
-                    dob: null,     // Load actual DOB later if stored separately
+                    name: storedUserData.name || storedUserData.username || '', // Use stored name or username
+                    email: storedUserData.email, // Use stored email
+                    username: storedUserData.username || data.email.split('@')[0], // Use stored username or generate default
+                    avatarUrl: storedUserData.avatarUrl || '', // Use stored avatar or default
+                    dob: storedUserData.dob || null,     // Use stored DOB or null
                 };
+                console.log('Creating user profile for session:', userProfile); // Debugging
                 localStorage.setItem('userProfile', JSON.stringify(userProfile));
 
                 toast({
@@ -83,10 +90,11 @@ export default function LoginPage() {
                   description: 'Welcome back! Redirecting...',
                 });
                 // 4. Redirect to home page
-                router.push('/');
+                 router.push('/');
 
             } else {
                  // --- Failure (Incorrect Password) ---
+                 console.log('Password mismatch.'); // Debugging
                  toast({
                     title: 'Login Failed',
                     description: 'Invalid email or password.',
@@ -176,3 +184,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

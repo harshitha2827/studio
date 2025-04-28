@@ -55,8 +55,9 @@ export default function SignupPage() {
 
     // --- Implement actual signup using localStorage ---
     if (typeof window !== 'undefined') {
+        const storageKey = `user_${data.email}`;
         // 1. Check if email already exists
-        const existingUserRaw = localStorage.getItem(`user_${data.email}`);
+        const existingUserRaw = localStorage.getItem(storageKey);
         if (existingUserRaw) {
             toast({
                 title: 'Signup Failed',
@@ -67,21 +68,28 @@ export default function SignupPage() {
         }
 
         // 2. Store user credentials (Insecure - for demonstration only)
+        const generatedUsername = data.email.split('@')[0] || `user_${Date.now()}`; // Generate username
         const userData = {
             email: data.email,
             password: data.password, // Storing plain password - highly insecure!
-            username: data.email.split('@')[0] || `user_${Date.now()}`, // Generate username
+            username: generatedUsername, // Store generated username
+            name: generatedUsername, // Use username as initial name
+            avatarUrl: '', // Default avatar
+            dob: null, // Default dob
         };
-        localStorage.setItem(`user_${data.email}`, JSON.stringify(userData));
+        console.log(`Storing user data to key: ${storageKey}`, userData); // Debugging
+        localStorage.setItem(storageKey, JSON.stringify(userData));
 
         // 3. Create and store the basic profile for immediate login
+        // This profile should match the structure used in login/profile pages
         const userProfile = {
-            name: userData.username, // Use username as initial name
-            email: data.email,
-            username: userData.username,
-            avatarUrl: '', // Default avatar
-            dob: null,
+            name: userData.name, // Use stored name
+            email: userData.email, // Use stored email
+            username: userData.username, // Use stored username
+            avatarUrl: userData.avatarUrl, // Use stored avatar
+            dob: userData.dob, // Use stored dob (will be null initially)
         };
+        console.log('Creating user profile for session:', userProfile); // Debugging
         localStorage.setItem('userProfile', JSON.stringify(userProfile));
 
         // 4. Show success toast
@@ -182,3 +190,4 @@ export default function SignupPage() {
     </div>
   );
 }
+
