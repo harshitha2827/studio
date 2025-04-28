@@ -12,11 +12,14 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label'; // Import Label
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, Heart, MessageSquare, Share2, ExternalLink, FileText, LogIn } from 'lucide-react'; // Replaced ThumbsUp with Heart, Added LogIn
+import { ArrowLeft, BookOpen, CheckCircle, Bookmark, Users, Heart, MessageSquare, Share2, ExternalLink, FileText, LogIn, Gift } from 'lucide-react'; // Added Gift
 import { useToast } from '@/hooks/use-toast';
 import { generateSampleBooks } from '@/lib/mock-data'; // For finding book by ID in mock data
 import { StarRating } from '@/components/star-rating'; // Import StarRating
 import { cn } from '@/lib/utils'; // Import cn for conditional classes
+import { RecommendationDialog } from '@/components/recommendation-dialog'; // Import RecommendationDialog
+import type { MockUser } from '@/interfaces/user'; // Assuming MockUser interface exists
+import type { Recommendation } from '@/interfaces/recommendation'; // Import Recommendation interface
 
 // --- Helper to find a book by ID ---
 // Define known seeds used across the app for generating initial mock data sets
@@ -102,6 +105,31 @@ const getInitials = (name: string | undefined): string => {
       .toUpperCase();
 };
 
+// Mock function to get current user (replace with actual auth context)
+const getCurrentUser = (): MockUser | null => {
+    if (typeof window === 'undefined') return null;
+    const storedProfile = localStorage.getItem('userProfile');
+    if (storedProfile) {
+        try {
+            const parsed = JSON.parse(storedProfile);
+            // Basic structure check, adapt as needed for your actual user profile structure
+             if (parsed && parsed.username && parsed.name) {
+                 // Add a mock ID if not present in your stored profile
+                 const mockId = `user-${parsed.username}`;
+                 return {
+                     id: mockId, // Generate a mock ID based on username
+                     username: parsed.username,
+                     name: parsed.name,
+                     avatarUrl: parsed.avatarUrl || undefined,
+                 };
+             }
+        } catch (e) {
+            console.error("Failed to parse current user profile:", e);
+        }
+    }
+    return null;
+};
+
 export default function BookDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -116,7 +144,9 @@ export default function BookDetailPage() {
   const [comment, setComment] = React.useState('');
   const [isLiked, setIsLiked] = React.useState(false); // State for like status
   const [isLoggedIn, setIsLoggedIn] = React.useState(false); // State for login status
+  const [currentUser, setCurrentUser] = React.useState<MockUser | null>(null); // State for current user
   const [isClient, setIsClient] = React.useState(false); // Track client mount
+  const [isRecommendDialogOpen, setIsRecommendDialogOpen] = React.useState(false); // State for recommend dialog
 
   // --- Mock Data Generation (Consistent per book) ---
   const mockReaderCount = React.useMemo(() => {
@@ -168,10 +198,11 @@ export default function BookDetailPage() {
   // --- Effects ---
   React.useEffect(() => {
     setIsClient(true); // Mark as client-mounted
-    // Check login status on mount
-    // TODO: Replace with actual auth check
-    const userProfileExists = typeof window !== 'undefined' && localStorage.getItem('userProfile');
-    setIsLoggedIn(!!userProfileExists);
+    // Check login status and get user info on mount
+    const user = getCurrentUser();
+    const loggedIn = !!user;
+    setIsLoggedIn(loggedIn);
+    setCurrentUser(user);
 
     if (bookId) {
       setLoading(true);
@@ -188,7 +219,7 @@ export default function BookDetailPage() {
       if (foundBook) {
         setBook(foundBook);
         // Load user-specific status/rating only if logged in
-        if (!!userProfileExists) {
+        if (loggedIn) {
             setCurrentStatus(foundBook.status);
             setCurrentRating(foundBook.rating ?? 0);
              // --- TODO: Load actual like status from user data if logged in ---
@@ -424,6 +455,59 @@ export default function BookDetailPage() {
         }
     };
 
+    // Handle Recommend Button Click
+    const handleRecommendClick = () => {
+        if (!isLoggedIn) {
+            showLoginToast();
+            return;
+        }
+        setIsRecommendDialogOpen(true); // Open the dialog
+    };
+
+    // Handle sending the recommendation from the dialog
+     const handleSendRecommendation = (recipient: MockUser, message?: string) => {
+         if (!book || !currentUser) return; // Should not happen if button is enabled
+
+         // --- TODO: Implement actual recommendation sending logic ---
+         // 1. Save the recommendation details (sender, recipient, book, message, timestamp) to your database/Firestore.
+         // 2. Optionally, trigger a notification for the recipient.
+
+          const newRecommendation: Recommendation = {
+                id: `rec-${Date.now()}-${Math.random().toString(16).slice(2)}`, // Simple unique ID
+                sender: currentUser,
+                recipient: recipient,
+                book: book,
+                message: message,
+                timestamp: new Date(),
+            };
+
+         // Mock saving to localStorage (for demonstration/persistence across refreshes if needed)
+         const existingRecsRaw = localStorage.getItem('mockRecommendations');
+         let existingRecs: Recommendation[] = [];
+         if (existingRecsRaw) {
+            try {
+                // Need to parse dates correctly if storing full recommendations
+                existingRecs = JSON.parse(existingRecsRaw).map((r: any) => ({
+                   ...r,
+                   timestamp: new Date(r.timestamp),
+                   // Potentially parse book dates too if storing full book object
+               }));
+            } catch (e) {
+                console.error("Failed to parse recommendations from localStorage:", e);
+            }
+         }
+         existingRecs.push(newRecommendation);
+          // Store only essential data or serialize dates before saving complex objects
+         localStorage.setItem('mockRecommendations', JSON.stringify(existingRecs.map(r => ({...r, timestamp: r.timestamp.toISOString() }))));
+
+
+         console.log(`Recommendation sent:`, newRecommendation);
+         toast({
+             title: "Recommendation Sent!",
+             description: `You recommended "${book.title}" to ${recipient.name}.`,
+         });
+     };
+
 
   // --- Rendering ---
   if (loading || !isClient) { // Show loading until client is mounted and data is loaded
@@ -468,257 +552,277 @@ export default function BookDetailPage() {
   const isBlankPdfBook = !book.coverUrl && book.blankPdfUrl;
 
   return (
-    <div className="flex min-h-screen flex-col bg-secondary/30">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-         <div className="container flex h-16 items-center">
-             <Button variant="ghost" size="sm" onClick={() => router.back()} aria-label="Go back">
-                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
-             </Button>
-             <h1 className="ml-4 truncate text-lg font-semibold">{book.title}</h1>
-         </div>
-      </header>
-
-      <main className="container mx-auto max-w-4xl flex-1 px-4 py-8">
-        <Card className="mb-8 overflow-hidden shadow-lg">
-           <div className="grid gap-0 md:grid-cols-3">
-              {/* Left Column: Cover Image or PDF Placeholder */}
-              <div className="flex items-center justify-center bg-muted p-6 md:col-span-1 md:p-8">
-                <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded shadow-md">
-                    {isBlankPdfBook ? (
-                         <Link
-                            href={isLoggedIn && book.blankPdfUrl ? book.blankPdfUrl : '#'}
-                            onClick={(e) => { if (!isLoggedIn) { e.preventDefault(); showLoginToast(); } }}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={`Open blank PDF for ${book.title}${!isLoggedIn ? ' (Login required)' : ''}`}
-                            className={cn("block h-full w-full", isLoggedIn ? "cursor-pointer" : "cursor-not-allowed")}
-                            >
-                           <div className="flex h-full w-full items-center justify-center bg-muted hover:bg-muted/80 transition-colors">
-                              <FileText className="h-1/2 w-1/2 text-muted-foreground opacity-50" />
-                           </div>
-                         </Link>
-                    ) : (
-                       <Image
-                           src={book.coverUrl || `https://picsum.photos/seed/${book.id}/300/400`}
-                           alt={`${book.title} cover`}
-                           fill
-                           sizes="(max-width: 768px) 80vw, 30vw"
-                           className="object-cover"
-                           priority // Prioritize loading the main book cover
-                        />
-                    )}
-                </div>
-              </div>
-
-              {/* Right Column: Details and Actions */}
-               <div className="flex flex-col md:col-span-2">
-                 <CardHeader className="p-6 md:p-8">
-                   <CardTitle className="text-2xl font-bold md:text-3xl">{book.title}</CardTitle>
-                   <CardDescription className="text-lg text-muted-foreground">by {book.author}</CardDescription>
-                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                       {book.pageCount && <span>{book.pageCount} pages</span>}
-                       {book.isbn && <span>ISBN: {book.isbn}</span>}
-                   </div>
-                   {/* Link to Blank PDF if applicable and NOT the main display */}
-                    {isBlankPdfBook && book.blankPdfUrl && (
-                       <Button
-                            variant="outline"
-                            size="sm"
-                            asChild={isLoggedIn} // Use asChild only if logged in to make it a Link
-                            onClick={() => { if (!isLoggedIn) showLoginToast(); }}
-                            className="mt-4"
-                            disabled={!isLoggedIn} // Disable if not logged in
-                            >
-                            {isLoggedIn ? (
-                                <Link href={book.blankPdfUrl} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    Open Blank PDF
-                                </Link>
-                            ) : (
-                                <>
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    Open Blank PDF (Login Req.)
-                                </>
-                            )}
-                       </Button>
-                    )}
-                 </CardHeader>
-
-                 <CardContent className="flex-grow space-y-6 p-6 pt-0 md:p-8 md:pt-0">
-                    {/* User Rating - Interactive only if logged in and finished */}
-                    {displayStatus === 'finished' && (
-                      <div>
-                        <h3 className="mb-2 font-semibold text-foreground">My Rating</h3>
-                        <StarRating
-                            rating={currentRating} // Use state for current rating
-                            onRatingChange={handleRatingChange} // Will check login inside
-                            size={24}
-                            readOnly={!isLoggedIn} // Read-only if not logged in
-                        />
-                      </div>
-                    )}
-                    {/* Show read-only last rating if not finished but has one */}
-                    {displayStatus !== 'finished' && book.rating !== undefined && book.rating > 0 && (
-                        <div>
-                            <h3 className="mb-2 font-semibold text-foreground">Last Rating</h3>
-                            <StarRating rating={book.rating} size={24} readOnly={true} />
-                        </div>
-                    )}
-
-                    {/* User Notes (Display only, editing handled elsewhere) */}
-                   {book.notes && isLoggedIn && ( // Only show notes if logged in
-                      <div>
-                         <h3 className="mb-2 font-semibold text-foreground">My Notes</h3>
-                         <p className="whitespace-pre-wrap text-sm text-foreground/80">{book.notes}</p>
-                      </div>
-                    )}
-
-                     {/* Engagement Stats & Like Button */}
-                     <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                         <div className="flex items-center" title={`${mockReaderCount.toLocaleString()} Readers`}>
-                             <Users className="mr-1.5 h-4 w-4" />
-                             <span>{mockReaderCount.toLocaleString()}</span>
-                         </div>
-                         {/* Interactive Like Button - Checks login on click */}
-                         <Button
-                             variant="ghost"
-                             size="sm"
-                             className={cn(
-                                 "flex items-center px-2 py-1 -ml-2 text-muted-foreground hover:text-primary", // Adjust padding/margin
-                                 isLoggedIn && isLiked && "text-red-500 hover:text-red-600" // Only show red if logged in and liked
-                             )}
-                             onClick={handleLikeClick}
-                             title={isLoggedIn ? (isLiked ? "Unlike" : "Like") : "Log in to like"}
-                             aria-pressed={isLoggedIn && isLiked}
-                             disabled={!isClient} // Disable briefly until client mount confirms login status
-                         >
-                             <Heart className={cn("mr-1.5 h-4 w-4 transition-colors", isLoggedIn && isLiked && "fill-current")} />
-                             <span>{displayedLikeCount.toLocaleString()}</span> {/* Use displayed count */}
-                         </Button>
-                         {/* Interactive Comment Icon Button */}
-                          <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex items-center px-2 py-1 -ml-2 text-muted-foreground hover:text-primary" // Adjust padding/margin
-                              onClick={handleCommentIconClick}
-                              title={`View ${mockCommentCount} Comments`}
-                              aria-label={`View ${mockCommentCount} comments`}
-                          >
-                              <MessageSquare className="mr-1.5 h-4 w-4" />
-                              <span>{mockCommentCount.toLocaleString()}</span>
-                          </Button>
-                     </div>
-
-
-                    {/* Author Bio */}
-                    {book.authorBio && (
-                       <div>
-                           <h3 className="mb-2 font-semibold text-foreground">About the Author</h3>
-                           <p className="text-sm text-foreground/80">{book.authorBio}</p>
-                       </div>
-                    )}
-                 </CardContent>
-
-                 {/* Actions Footer */}
-                 <div className="mt-auto space-y-4 border-t bg-muted/50 p-4 md:p-6">
-                    {/* Status Management - Only show if logged in */}
-                    {isLoggedIn ? (
-                        <div>
-                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Manage Status</h3>
-                            <div className="flex flex-wrap gap-2">
-                            <Button variant={displayStatus === 'reading' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('reading')}>
-                                <BookOpen className="mr-2 h-4 w-4" /> {isBlankPdfBook ? 'Read Now' : 'Reading'}
-                            </Button>
-                            <Button variant={displayStatus === 'finished' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('finished')}>
-                                <CheckCircle className="mr-2 h-4 w-4" /> Finished
-                            </Button>
-                            <Button variant={displayStatus === 'want-to-read' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('want-to-read')}>
-                                <Bookmark className="mr-2 h-4 w-4" /> Want to Read
-                            </Button>
-                            </div>
-                        </div>
-                     ) : (
-                        <div className="text-center text-sm text-muted-foreground">
-                            <Button variant="outline" size="sm" onClick={() => router.push('/login')}>
-                                <LogIn className="mr-2 h-4 w-4" /> Log in to manage status
-                            </Button>
-                        </div>
-                     )}
-                    {/* Share Button - Always visible */}
-                    <div>
-                         <Button variant="outline" size="sm" onClick={handleShare} className="w-full sm:w-auto">
-                             <Share2 className="mr-2 h-4 w-4" /> Share
-                         </Button>
-                    </div>
-                 </div>
-               </div>
+    <> {/* Use React Fragment to wrap page and dialog */}
+      <div className="flex min-h-screen flex-col bg-secondary/30">
+        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+           <div className="container flex h-16 items-center">
+               <Button variant="ghost" size="sm" onClick={() => router.back()} aria-label="Go back">
+                   <ArrowLeft className="mr-2 h-4 w-4" /> Back
+               </Button>
+               <h1 className="ml-4 truncate text-lg font-semibold">{book.title}</h1>
            </div>
-        </Card>
+        </header>
 
-        {/* Comments Section Card */}
-        <Card id="comments-section" className="shadow-lg"> {/* Added ID here */}
-           <CardHeader>
-              <CardTitle className="flex items-center">
-                 <MessageSquare className="mr-2 h-5 w-5 text-primary"/> Comments ({mockCommentCount}) {/* Show count in title */}
-              </CardTitle>
-              <CardDescription>Share your thoughts or read what others are saying.</CardDescription>
-           </CardHeader>
-           <CardContent className="space-y-4">
-              {/* Mock Comments - Always visible */}
-              <div className="space-y-4">
-                 {/* Example Mock Comment 1 */}
-                 <div className="flex items-start space-x-3">
-                    <Avatar className="h-8 w-8 border">
-                        {/* Use a deterministic avatar based on user + book */}
-                        <AvatarImage src={`https://i.pravatar.cc/40?u=user1_${bookId}`} alt="User 1" />
-                        <AvatarFallback>{getInitials('User One')}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 rounded-md border bg-muted/30 p-3">
-                        <p className="text-sm font-medium text-foreground">BookLover123</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Absolutely loved this book! The characters were so well-developed.</p>
-                        <p className="mt-1 text-xs text-muted-foreground/70">2 days ago</p>
-                    </div>
-                 </div>
-                 <Separator />
-                  {/* Example Mock Comment 2 */}
-                 <div className="flex items-start space-x-3">
-                     <Avatar className="h-8 w-8 border">
-                         <AvatarImage src={`https://i.pravatar.cc/40?u=user2_${bookId}`} alt="User 2" />
-                        <AvatarFallback>{getInitials('Reader Dude')}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 rounded-md border bg-muted/30 p-3">
-                        <p className="text-sm font-medium text-foreground">ReaderDude</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Solid read! The plot twist near the end caught me by surprise.</p>
-                         <p className="mt-1 text-xs text-muted-foreground/70">1 week ago</p>
-                    </div>
-                 </div>
-                  {/* Add more comments or pagination controls here */}
-              </div>
-
-              <Separator className="my-6"/>
-
-              {/* Add Comment Form - Only functional if logged in */}
-              <form onSubmit={handleCommentSubmit} className="space-y-3">
-                 <Label htmlFor="comment-input" className="font-semibold">Add your comment</Label>
-                 <Textarea
-                    id="comment-input"
-                    placeholder={isLoggedIn ? "Write your thoughts here..." : "Log in to add a comment..."}
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    rows={3}
-                    className="resize-none"
-                    aria-label={isLoggedIn ? "Write your comment" : "Log in to comment"}
-                    disabled={!isLoggedIn} // Disable if not logged in
-                  />
-                  <div className="flex justify-end">
-                     <Button type="submit" size="sm" disabled={!comment.trim() || !isLoggedIn}>
-                        {isLoggedIn ? 'Post Comment' : 'Log in to Post'}
-                    </Button>
+        <main className="container mx-auto max-w-4xl flex-1 px-4 py-8">
+          <Card className="mb-8 overflow-hidden shadow-lg">
+             <div className="grid gap-0 md:grid-cols-3">
+                {/* Left Column: Cover Image or PDF Placeholder */}
+                <div className="flex items-center justify-center bg-muted p-6 md:col-span-1 md:p-8">
+                  <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded shadow-md">
+                      {isBlankPdfBook ? (
+                           <Link
+                              href={isLoggedIn && book.blankPdfUrl ? book.blankPdfUrl : '#'}
+                              onClick={(e) => { if (!isLoggedIn) { e.preventDefault(); showLoginToast(); } }}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Open blank PDF for ${book.title}${!isLoggedIn ? ' (Login required)' : ''}`}
+                              className={cn("block h-full w-full", isLoggedIn ? "cursor-pointer" : "cursor-not-allowed")}
+                              >
+                             <div className="flex h-full w-full items-center justify-center bg-muted hover:bg-muted/80 transition-colors">
+                                <FileText className="h-1/2 w-1/2 text-muted-foreground opacity-50" />
+                             </div>
+                           </Link>
+                      ) : (
+                         <Image
+                             src={book.coverUrl || `https://picsum.photos/seed/${book.id}/300/400`}
+                             alt={`${book.title} cover`}
+                             fill
+                             sizes="(max-width: 768px) 80vw, 30vw"
+                             className="object-cover"
+                             priority // Prioritize loading the main book cover
+                          />
+                      )}
                   </div>
-              </form>
-           </CardContent>
-        </Card>
-      </main>
-    </div>
+                </div>
+
+                {/* Right Column: Details and Actions */}
+                 <div className="flex flex-col md:col-span-2">
+                   <CardHeader className="p-6 md:p-8">
+                     <CardTitle className="text-2xl font-bold md:text-3xl">{book.title}</CardTitle>
+                     <CardDescription className="text-lg text-muted-foreground">by {book.author}</CardDescription>
+                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                         {book.pageCount && <span>{book.pageCount} pages</span>}
+                         {book.isbn && <span>ISBN: {book.isbn}</span>}
+                     </div>
+                     {/* Link to Blank PDF if applicable and NOT the main display */}
+                      {isBlankPdfBook && book.blankPdfUrl && (
+                         <Button
+                              variant="outline"
+                              size="sm"
+                              asChild={isLoggedIn} // Use asChild only if logged in to make it a Link
+                              onClick={() => { if (!isLoggedIn) showLoginToast(); }}
+                              className="mt-4"
+                              disabled={!isLoggedIn} // Disable if not logged in
+                              >
+                              {isLoggedIn ? (
+                                  <Link href={book.blankPdfUrl} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="mr-2 h-4 w-4" />
+                                      Open Blank PDF
+                                  </Link>
+                              ) : (
+                                  <>
+                                      <ExternalLink className="mr-2 h-4 w-4" />
+                                      Open Blank PDF (Login Req.)
+                                  </>
+                              )}
+                         </Button>
+                      )}
+                   </CardHeader>
+
+                   <CardContent className="flex-grow space-y-6 p-6 pt-0 md:p-8 md:pt-0">
+                      {/* User Rating - Interactive only if logged in and finished */}
+                      {displayStatus === 'finished' && (
+                        <div>
+                          <h3 className="mb-2 font-semibold text-foreground">My Rating</h3>
+                          <StarRating
+                              rating={currentRating} // Use state for current rating
+                              onRatingChange={handleRatingChange} // Will check login inside
+                              size={24}
+                              readOnly={!isLoggedIn} // Read-only if not logged in
+                          />
+                        </div>
+                      )}
+                      {/* Show read-only last rating if not finished but has one */}
+                      {displayStatus !== 'finished' && book.rating !== undefined && book.rating > 0 && (
+                          <div>
+                              <h3 className="mb-2 font-semibold text-foreground">Last Rating</h3>
+                              <StarRating rating={book.rating} size={24} readOnly={true} />
+                          </div>
+                      )}
+
+                      {/* User Notes (Display only, editing handled elsewhere) */}
+                     {book.notes && isLoggedIn && ( // Only show notes if logged in
+                        <div>
+                           <h3 className="mb-2 font-semibold text-foreground">My Notes</h3>
+                           <p className="whitespace-pre-wrap text-sm text-foreground/80">{book.notes}</p>
+                        </div>
+                      )}
+
+                       {/* Engagement Stats & Like Button */}
+                       <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+                           <div className="flex items-center" title={`${mockReaderCount.toLocaleString()} Readers`}>
+                               <Users className="mr-1.5 h-4 w-4" />
+                               <span>{mockReaderCount.toLocaleString()}</span>
+                           </div>
+                           {/* Interactive Like Button - Checks login on click */}
+                           <Button
+                               variant="ghost"
+                               size="sm"
+                               className={cn(
+                                   "flex items-center px-2 py-1 -ml-2 text-muted-foreground hover:text-primary", // Adjust padding/margin
+                                   isLoggedIn && isLiked && "text-red-500 hover:text-red-600" // Only show red if logged in and liked
+                               )}
+                               onClick={handleLikeClick}
+                               title={isLoggedIn ? (isLiked ? "Unlike" : "Like") : "Log in to like"}
+                               aria-pressed={isLoggedIn && isLiked}
+                               disabled={!isClient} // Disable briefly until client mount confirms login status
+                           >
+                               <Heart className={cn("mr-1.5 h-4 w-4 transition-colors", isLoggedIn && isLiked && "fill-current")} />
+                               <span>{displayedLikeCount.toLocaleString()}</span> {/* Use displayed count */}
+                           </Button>
+                           {/* Interactive Comment Icon Button */}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="flex items-center px-2 py-1 -ml-2 text-muted-foreground hover:text-primary" // Adjust padding/margin
+                                onClick={handleCommentIconClick}
+                                title={`View ${mockCommentCount} Comments`}
+                                aria-label={`View ${mockCommentCount} comments`}
+                            >
+                                <MessageSquare className="mr-1.5 h-4 w-4" />
+                                <span>{mockCommentCount.toLocaleString()}</span>
+                            </Button>
+                       </div>
+
+
+                      {/* Author Bio */}
+                      {book.authorBio && (
+                         <div>
+                             <h3 className="mb-2 font-semibold text-foreground">About the Author</h3>
+                             <p className="text-sm text-foreground/80">{book.authorBio}</p>
+                         </div>
+                      )}
+                   </CardContent>
+
+                   {/* Actions Footer */}
+                   <div className="mt-auto space-y-4 border-t bg-muted/50 p-4 md:p-6">
+                      {/* Status Management - Only show if logged in */}
+                      {isLoggedIn ? (
+                          <div>
+                              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Manage Status</h3>
+                              <div className="flex flex-wrap gap-2">
+                              <Button variant={displayStatus === 'reading' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('reading')}>
+                                  <BookOpen className="mr-2 h-4 w-4" /> {isBlankPdfBook ? 'Read Now' : 'Reading'}
+                              </Button>
+                              <Button variant={displayStatus === 'finished' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('finished')}>
+                                  <CheckCircle className="mr-2 h-4 w-4" /> Finished
+                              </Button>
+                              <Button variant={displayStatus === 'want-to-read' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('want-to-read')}>
+                                  <Bookmark className="mr-2 h-4 w-4" /> Want to Read
+                              </Button>
+                              </div>
+                          </div>
+                       ) : (
+                          <div className="text-center text-sm text-muted-foreground">
+                              <Button variant="outline" size="sm" onClick={() => router.push('/login')}>
+                                  <LogIn className="mr-2 h-4 w-4" /> Log in to manage status
+                              </Button>
+                          </div>
+                       )}
+                      {/* Share & Recommend Buttons */}
+                       <div className="flex flex-wrap gap-2">
+                           <Button variant="outline" size="sm" onClick={handleShare} className="flex-grow sm:flex-grow-0">
+                               <Share2 className="mr-2 h-4 w-4" /> Share
+                           </Button>
+                           {/* Recommend Button - Only visible if logged in */}
+                            {isLoggedIn && (
+                                <Button variant="outline" size="sm" onClick={handleRecommendClick} className="flex-grow sm:flex-grow-0">
+                                    <Gift className="mr-2 h-4 w-4" /> Recommend
+                                </Button>
+                            )}
+                      </div>
+                   </div>
+                 </div>
+             </div>
+          </Card>
+
+          {/* Comments Section Card */}
+          <Card id="comments-section" className="shadow-lg"> {/* Added ID here */}
+             <CardHeader>
+                <CardTitle className="flex items-center">
+                   <MessageSquare className="mr-2 h-5 w-5 text-primary"/> Comments ({mockCommentCount}) {/* Show count in title */}
+                </CardTitle>
+                <CardDescription>Share your thoughts or read what others are saying.</CardDescription>
+             </CardHeader>
+             <CardContent className="space-y-4">
+                {/* Mock Comments - Always visible */}
+                <div className="space-y-4">
+                   {/* Example Mock Comment 1 */}
+                   <div className="flex items-start space-x-3">
+                      <Avatar className="h-8 w-8 border">
+                          {/* Use a deterministic avatar based on user + book */}
+                          <AvatarImage src={`https://i.pravatar.cc/40?u=user1_${bookId}`} alt="User 1" />
+                          <AvatarFallback>{getInitials('User One')}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 rounded-md border bg-muted/30 p-3">
+                          <p className="text-sm font-medium text-foreground">BookLover123</p>
+                          <p className="mt-1 text-sm text-muted-foreground">Absolutely loved this book! The characters were so well-developed.</p>
+                          <p className="mt-1 text-xs text-muted-foreground/70">2 days ago</p>
+                      </div>
+                   </div>
+                   <Separator />
+                    {/* Example Mock Comment 2 */}
+                   <div className="flex items-start space-x-3">
+                       <Avatar className="h-8 w-8 border">
+                           <AvatarImage src={`https://i.pravatar.cc/40?u=user2_${bookId}`} alt="User 2" />
+                          <AvatarFallback>{getInitials('Reader Dude')}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 rounded-md border bg-muted/30 p-3">
+                          <p className="text-sm font-medium text-foreground">ReaderDude</p>
+                          <p className="mt-1 text-sm text-muted-foreground">Solid read! The plot twist near the end caught me by surprise.</p>
+                           <p className="mt-1 text-xs text-muted-foreground/70">1 week ago</p>
+                      </div>
+                   </div>
+                    {/* Add more comments or pagination controls here */}
+                </div>
+
+                <Separator className="my-6"/>
+
+                {/* Add Comment Form - Only functional if logged in */}
+                <form onSubmit={handleCommentSubmit} className="space-y-3">
+                   <Label htmlFor="comment-input" className="font-semibold">Add your comment</Label>
+                   <Textarea
+                      id="comment-input"
+                      placeholder={isLoggedIn ? "Write your thoughts here..." : "Log in to add a comment..."}
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      rows={3}
+                      className="resize-none"
+                      aria-label={isLoggedIn ? "Write your comment" : "Log in to comment"}
+                      disabled={!isLoggedIn} // Disable if not logged in
+                    />
+                    <div className="flex justify-end">
+                       <Button type="submit" size="sm" disabled={!comment.trim() || !isLoggedIn}>
+                          {isLoggedIn ? 'Post Comment' : 'Log in to Post'}
+                      </Button>
+                    </div>
+                </form>
+             </CardContent>
+          </Card>
+        </main>
+      </div>
+
+       {/* Recommendation Dialog */}
+       {book && currentUser && (
+           <RecommendationDialog
+             isOpen={isRecommendDialogOpen}
+             onOpenChange={setIsRecommendDialogOpen}
+             book={book}
+             currentUser={currentUser}
+             onSendRecommendation={handleSendRecommendation}
+           />
+       )}
+    </>
   );
 }
+
