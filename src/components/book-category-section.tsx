@@ -21,7 +21,7 @@ export function BookCategorySection({ title, books }: BookCategorySectionProps) 
               <SimpleBookCard
                 key={book.id}
                 book={book}
-                className="w-[120px] sm:w-[150px] flex-shrink-0" // Reduced width
+                className="w-[100px] sm:w-[120px] flex-shrink-0" // Reduced width further
               />
             ))}
            </div>
