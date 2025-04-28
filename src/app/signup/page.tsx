@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -39,6 +40,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
   const { toast } = useToast();
+  const router = useRouter(); // Get router instance
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -51,12 +53,21 @@ export default function SignupPage() {
   const onSubmit = (data: SignupFormValues) => {
     // Placeholder for actual signup logic
     console.log('Signup attempt with:', { email: data.email }); // Avoid logging password
-    toast({
-      title: 'Signup Submitted',
-      description: 'Signup functionality is not yet implemented.',
-    });
+
+    // Simulate successful signup
     // In a real app, you would call an authentication service here
-    // Consider redirecting the user after successful signup
+    // and handle potential errors (e.g., email already exists)
+
+    // Show success toast
+    toast({
+      title: 'Signup Successful',
+      description: 'Welcome! Redirecting you to your bookshelf...',
+    });
+
+    // Redirect to home page after a short delay to allow toast visibility
+    setTimeout(() => {
+      router.push('/');
+    }, 1500); // Redirect after 1.5 seconds
   };
 
   return (
@@ -114,8 +125,8 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Sign Up
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                 {form.formState.isSubmitting ? 'Signing Up...' : 'Sign Up'}
               </Button>
             </form>
           </Form>
