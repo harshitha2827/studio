@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book type
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, User, Settings, History, BookMarked, Search, MessageSquare, Users } from "lucide-react"; // Added Users icon
+import { LogOut, User, Settings, BookMarked, Search, MessageSquare, Users, UserSearch } from "lucide-react"; // Added Users, UserSearch icons
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,7 @@ import { generateSampleBooks } from '@/lib/mock-data'; // Import mock data gener
 import { Input } from "@/components/ui/input"; // Import Input component
 import { Chat } from '@/interfaces/chat'; // Import Chat interface
 import { useRouter } from 'next/navigation'; // Import useRouter
+import { cn } from "@/lib/utils";
 
 // Simple type for profile data needed here
 type UserProfile = {
@@ -40,7 +41,8 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = React.useState(true); // Assume logged in for demo
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
   const [isClient, setIsClient] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState(''); // State for the search bar
+  const [bookSearchTerm, setBookSearchTerm] = React.useState(''); // State for the book search bar
+  const [userSearchTerm, setUserSearchTerm] = React.useState(''); // State for the user search bar
   const { toast } = useToast();
   const router = useRouter();
 
@@ -100,24 +102,33 @@ export default function Home() {
       .toUpperCase();
    };
 
-   const handleSearchSubmit = (e: React.FormEvent) => {
+   // Handle Book Search
+   const handleBookSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchTerm.trim()) return;
-        // Navigate to search results page with the query parameter
-        router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+        if (!bookSearchTerm.trim()) return;
+        router.push(`/search?q=${encodeURIComponent(bookSearchTerm.trim())}`);
    };
-
-   // Handle search icon click on mobile
-   const handleMobileSearchClick = () => {
-     if (!searchTerm.trim()) {
-       // Optionally prompt user to enter search term
-       toast({
-         title: "Enter Search Term",
-         description: "Please type what you want to search for.",
-       });
+   const handleMobileBookSearchClick = () => {
+     if (!bookSearchTerm.trim()) {
+       toast({ title: "Enter Search Term", description: "Please type what book you want to search for." });
        return;
      }
-     router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+     router.push(`/search?q=${encodeURIComponent(bookSearchTerm.trim())}`);
+   };
+
+    // Handle User Search
+   const handleUserSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!userSearchTerm.trim()) return;
+        // Navigate to user search results page (e.g., /users/search)
+        router.push(`/users/search?q=${encodeURIComponent(userSearchTerm.trim())}`);
+   };
+   const handleMobileUserSearchClick = () => {
+     if (!userSearchTerm.trim()) {
+       toast({ title: "Enter User Search Term", description: "Please type the user you want to search for." });
+       return;
+     }
+     router.push(`/users/search?q=${encodeURIComponent(userSearchTerm.trim())}`);
    };
 
    // Function to handle navigation, checks login status for protected routes
@@ -149,71 +160,105 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-          {/* Left Section: App Title & Search */}
-          <div className="flex gap-4 md:gap-6 items-center flex-1 sm:flex-none">
+          {/* Left Section: App Title */}
+          <div className="flex items-center gap-4 md:gap-6">
              <Link href="/" className="flex items-center space-x-2">
                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v16H6.5a2.5 2.5 0 0 1 0-5H20"></path>
                </svg>
                <span className="inline-block font-bold">BookBurst</span>
              </Link>
+          </div>
 
-             {/* Search Bar */}
-             <form onSubmit={handleSearchSubmit} className="hidden sm:flex relative flex-grow max-w-xs items-center">
-                <Input
-                    type="search"
-                    placeholder="Search books..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-9 text-sm" // Add padding for icon
-                 />
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-             </form>
-           </div>
+           {/* Center Section: Search Bars (Desktop) */}
+          <div className="hidden sm:flex flex-1 justify-center gap-4 max-w-2xl">
+              {/* Book Search */}
+              <form onSubmit={handleBookSearchSubmit} className="relative flex-grow max-w-xs items-center">
+                  <Input
+                      type="search"
+                      placeholder="Search books..."
+                      value={bookSearchTerm}
+                      onChange={(e) => setBookSearchTerm(e.target.value)}
+                      className="pl-10 h-9 text-sm" // Add padding for icon
+                      aria-label="Search for books"
+                  />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </form>
+              {/* User Search */}
+              <form onSubmit={handleUserSearchSubmit} className="relative flex-grow max-w-xs items-center">
+                  <Input
+                      type="search"
+                      placeholder="Search users..."
+                      value={userSearchTerm}
+                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      className="pl-10 h-9 text-sm" // Add padding for icon
+                      aria-label="Search for users"
+                  />
+                  <UserSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </form>
+          </div>
 
 
           {/* Right Section: Icons & Profile */}
-          <div className="flex items-center justify-end space-x-1 sm:space-x-2"> {/* Reduced space between icons */}
-            {/* Search Icon Button for Mobile */}
-             {/* Mobile Search Input - Shown instead of icon button when search is intended */}
-             <div className="sm:hidden flex items-center relative">
-                <Input
-                    type="search"
-                    placeholder="Search..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 h-9 text-sm w-32" // Adjust width as needed
-                    aria-label="Search books"
-                />
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9"
-                    onClick={handleMobileSearchClick} // Trigger search on click
-                    aria-label="Submit search"
-                 >
-                    <Search className="h-4 w-4" />
-                 </Button>
-             </div>
+          <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+             {/* Mobile Search Inputs & Buttons */}
+             <div className="sm:hidden flex items-center gap-1">
+                {/* Mobile Book Search */}
+                <div className="relative">
+                    <Input
+                        type="search"
+                        placeholder="Books..."
+                        value={bookSearchTerm}
+                        onChange={(e) => setBookSearchTerm(e.target.value)}
+                        className="pl-7 h-9 text-sm w-24" // Shorter input
+                        aria-label="Search books"
+                    />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7" // Smaller button
+                        onClick={handleMobileBookSearchClick}
+                        aria-label="Submit book search"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+                 {/* Mobile User Search */}
+                 <div className="relative">
+                     <Input
+                         type="search"
+                         placeholder="Users..."
+                         value={userSearchTerm}
+                         onChange={(e) => setUserSearchTerm(e.target.value)}
+                         className="pl-7 h-9 text-sm w-24" // Shorter input
+                         aria-label="Search users"
+                     />
+                     <Button
+                         variant="ghost"
+                         size="icon"
+                         className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7" // Smaller button
+                         onClick={handleMobileUserSearchClick}
+                         aria-label="Submit user search"
+                     >
+                         <UserSearch className="h-4 w-4" />
+                     </Button>
+                 </div>
+            </div>
 
 
-            {/* Readers Club Button - Use navigate function */}
+            {/* Action Icons */}
             <Button variant="ghost" size="icon" onClick={() => navigate('/readers-club')} aria-label="Readers Club">
                 <Users className="h-5 w-5" />
             </Button>
-
-             {/* Chat Button - Use navigate function */}
             <Button variant="ghost" size="icon" onClick={() => navigate('/chat')} aria-label="Chat">
                  <MessageSquare className="h-5 w-5" />
             </Button>
-
-            {/* Bookshelf Button - Use navigate function */}
              <Button variant="ghost" size="icon" onClick={() => navigate('/bookshelf')} aria-label="My Bookshelf">
                <BookMarked className="h-5 w-5" />
              </Button>
 
 
-              {/* Only render profile/login state after client mount to avoid hydration mismatch */}
+              {/* Profile Dropdown or Login Button */}
               {isClient && (
                 isLoggedIn && userProfile ? (
                   <DropdownMenu>
@@ -282,3 +327,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
