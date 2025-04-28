@@ -24,7 +24,7 @@ interface MockUserProfile {
     username: string;
     avatarUrl?: string;
     bio?: string;
-    joinDate?: Date; // Optional join date
+    // joinDate?: Date; // Removed joinDate
     // Bookshelf data will be generated separately
 }
 
@@ -45,17 +45,13 @@ const findMockUserByUsername = (username: string): MockUserProfile | null => {
       return x - Math.floor(x);
     }
 
-    // **Reset Join Date Logic:** Generate a date ~30 days ago based on the seed
-    const joinDateOffset = Math.floor(pseudoRandom(seed + 10) * 10 + 25); // 25-34 days ago
-    const joinDate = new Date(Date.now() - joinDateOffset * 24 * 60 * 60 * 1000);
-
     return {
         id: `user-${usernameLower}`,
         name: `${firstName} ${lastNameInitial}.`, // Generate a plausible name
         username: username,
         avatarUrl: `https://i.pravatar.cc/150?u=${usernameLower}`, // Consistent avatar
         bio: `Mock bio for ${firstName}. A dedicated reader on BookBurst. Currently exploring the world of ${['fiction', 'non-fiction', 'fantasy'][Math.floor(pseudoRandom(seed+2)*3)]}.`,
-        joinDate: joinDate, // Use the reset join date
+        // joinDate: joinDate, // Removed joinDate
     };
 }
 
@@ -201,7 +197,7 @@ export default function UserProfilePage() {
                             <CardTitle className="text-2xl sm:text-3xl">{userProfile.name}</CardTitle>
                             <CardDescription className="text-lg text-primary">@{userProfile.username}</CardDescription>
                             {userProfile.bio && <p className="text-sm text-muted-foreground pt-1">{userProfile.bio}</p>}
-                            {userProfile.joinDate && <p className="text-xs text-muted-foreground/80 pt-1">Joined BookBurst on {userProfile.joinDate.toLocaleDateString()}</p>}
+                             {/* Removed Join Date Display */}
                              {/* Follow/Unfollow Button - Show only if logged in and not the current user's profile */}
                              {loggedInUserExists && !isCurrentUserProfile && (
                                 <Button
@@ -291,5 +287,3 @@ export default function UserProfilePage() {
         </div>
     );
 }
-
-    
