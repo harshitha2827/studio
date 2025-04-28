@@ -32,12 +32,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, ArrowLeft } from 'lucide-react';
+import { CalendarIcon, ArrowLeft, User } from 'lucide-react'; // Added User icon for fallback
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 
-// Define the schema for profile data
+// Define the schema for profile data, including avatar URL
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   username: z
@@ -46,6 +47,7 @@ const profileSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
   email: z.string().email('Invalid email address'), // Assuming email is fetched and read-only for now
   dob: z.date().optional(), // Date of Birth is optional
+  avatarUrl: z.string().url("Invalid URL").optional().or(z.literal('')), // Optional Avatar URL
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -59,7 +61,11 @@ const fetchUserData = (): ProfileFormValues => {
      if (storedData) {
        const parsed = JSON.parse(storedData);
        // Make sure to parse the date string back into a Date object
-       return { ...parsed, dob: parsed.dob ? new Date(parsed.dob) : undefined };
+       return {
+            ...parsed,
+            dob: parsed.dob ? new Date(parsed.dob) : undefined,
+            avatarUrl: parsed.avatarUrl || '', // Ensure avatarUrl exists
+        };
      }
    }
   // Default mock data if nothing is stored
@@ -68,6 +74,7 @@ const fetchUserData = (): ProfileFormValues => {
     username: 'alex_doe',
     email: 'alex.doe@example.com', // Typically read-only
     dob: undefined, // Default to undefined or a sample date new Date(1995, 5, 15)
+    avatarUrl: '', // Default empty avatar URL
   };
 };
 
@@ -78,6 +85,7 @@ const saveUserData = (data: ProfileFormValues) => {
     const dataToStore = {
       ...data,
       dob: data.dob ? data.dob.toISOString() : null,
+      avatarUrl: data.avatarUrl || '', // Ensure avatarUrl is stored
     };
     localStorage.setItem('userProfile', JSON.stringify(dataToStore));
    }
@@ -95,6 +103,10 @@ export default function ProfilePage() {
     defaultValues: fetchUserData(), // Load initial data
   });
 
+   // Watch avatarUrl for dynamic preview
+   const avatarUrl = form.watch("avatarUrl");
+   const userName = form.watch("name"); // Get name for fallback initials
+
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       await saveUserData(data);
@@ -105,12 +117,24 @@ export default function ProfilePage() {
       // Optionally update defaultValues if needed after save
        form.reset(data); // Reset form with the saved data to clear dirty state
     } catch (error) {
+        console.error("Error saving profile:", error);
       toast({
         title: 'Update Failed',
         description: 'Could not update your profile. Please try again.',
         variant: 'destructive',
       });
     }
+  };
+
+  // Generate initials for Avatar fallback
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return '';
+    const names = name.split(' ');
+    return names
+      .map((n) => n[0])
+      .slice(0, 2) // Take first letter of first two names
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -120,14 +144,25 @@ export default function ProfilePage() {
          <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 left-4 text-muted-foreground hover:text-foreground"
+            className="absolute top-4 left-4 text-muted-foreground hover:text-foreground z-10" // Ensure button is above other content
             onClick={() => router.push('/')} // Navigate back to home/bookshelf
             aria-label="Back to Bookshelf"
           >
            <ArrowLeft className="h-5 w-5" />
          </Button>
 
-        <CardHeader className="text-center pt-12"> {/* Added padding-top */}
+         {/* Avatar Display */}
+         <div className="flex justify-center pt-8 -mb-8">
+            <Avatar className="h-24 w-24 border-4 border-background shadow-md">
+                <AvatarImage src={avatarUrl} alt={userName || 'User Profile'} />
+                <AvatarFallback className="text-2xl bg-muted text-muted-foreground">
+                 {userName ? getInitials(userName) : <User className="h-8 w-8" />}
+                </AvatarFallback>
+             </Avatar>
+         </div>
+
+
+        <CardHeader className="text-center pt-16"> {/* Increased padding-top */}
           <CardTitle className="text-2xl">Profile Details</CardTitle>
           <CardDescription>
             View and update your personal information.
@@ -136,6 +171,24 @@ export default function ProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Avatar URL Field */}
+              <FormField
+                control={form.control}
+                name="avatarUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Profile Picture URL</FormLabel>
+                    <FormControl>
+                      <Input type="url" placeholder="https://example.com/your-avatar.jpg" {...field} />
+                    </FormControl>
+                     <FormDescription>
+                       Enter the URL of your profile picture.
+                     </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Name Field */}
               <FormField
                 control={form.control}

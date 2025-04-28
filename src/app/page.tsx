@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Bookshelf } from "@/components/bookshelf";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { UserCircle, LogOut, User, Settings, History } from "lucide-react"; // Import necessary icons
+import { LogOut, User, Settings, History } from "lucide-react"; // Import necessary icons
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,23 +15,52 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 import { useToast } from "@/hooks/use-toast"; // Import useToast hook
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
+
+// Simple type for profile data needed here
+type UserProfile = {
+  name?: string;
+  avatarUrl?: string;
+};
 
 export default function Home() {
   // Simulate authentication state - replace with actual auth logic later
   const [isLoggedIn, setIsLoggedIn] = React.useState(true); // Set to true for demonstration
+  const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
   const { toast } = useToast();
 
-  // Simulate checking auth state on mount (e.g., from localStorage/cookie)
-  // React.useEffect(() => {
-  //   // Replace with your actual check, e.g., check for a token
-  //   const userIsAuthenticated = localStorage.getItem('isLoggedIn') === 'true';
-  //   setIsLoggedIn(userIsAuthenticated);
-  // }, []);
+  // Simulate checking auth state and fetching profile data on mount
+  React.useEffect(() => {
+    // Replace with your actual check, e.g., check for a token
+    // const userIsAuthenticated = localStorage.getItem('isLoggedIn') === 'true';
+    // setIsLoggedIn(userIsAuthenticated);
+
+    // If logged in, fetch basic profile data (e.g., from localStorage for demo)
+    if (isLoggedIn && typeof window !== 'undefined') {
+       const storedData = localStorage.getItem('userProfile');
+       if (storedData) {
+            try {
+                const parsed: { name?: string; avatarUrl?: string } = JSON.parse(storedData);
+                setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl });
+            } catch (e) {
+                 console.error("Failed to parse user profile from localStorage", e);
+                 setUserProfile({ name: 'User', avatarUrl: '' }); // Fallback
+            }
+       } else {
+            // Default if no profile exists yet
+            setUserProfile({ name: 'User', avatarUrl: '' });
+       }
+    } else {
+        setUserProfile(null); // Clear profile if not logged in
+    }
+  }, [isLoggedIn]); // Re-run if login status changes
 
   const handleLogout = () => {
     // Simulate logout action
     // localStorage.setItem('isLoggedIn', 'false'); // Example for local storage
+    // localStorage.removeItem('userProfile'); // Clear profile on logout
     setIsLoggedIn(false);
+    setUserProfile(null); // Clear profile state
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out.",
@@ -39,19 +68,35 @@ export default function Home() {
     // In a real app, you'd redirect or clear auth state properly
   };
 
+   // Generate initials for Avatar fallback
+   const getInitials = (name: string | undefined): string => {
+    if (!name) return 'U'; // Default to 'U' if no name
+    const names = name.split(' ');
+    return names
+      .map((n) => n[0])
+      .slice(0, 2) // Take first letter of first two names
+      .join('')
+      .toUpperCase();
+   };
+
   return (
     <main className="flex min-h-screen flex-col items-center p-4 md:p-8 lg:p-12 relative"> {/* Ensure relative positioning for absolute children */}
       {/* Conditional Top Right Content: Profile Dropdown or Login Button */}
       <div className="absolute top-4 right-4 z-10"> {/* Ensure dropdown appears above other content */}
-        {isLoggedIn ? (
+        {isLoggedIn && userProfile ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="User Profile Menu">
-                <UserCircle className="h-6 w-6" />
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                 <Avatar className="h-8 w-8">
+                    <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name || 'User Profile'} />
+                    <AvatarFallback>
+                       {getInitials(userProfile.name)}
+                    </AvatarFallback>
+                </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{userProfile.name || 'My Account'}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/profile"> {/* Link to the profile page */}
