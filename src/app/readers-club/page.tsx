@@ -105,16 +105,23 @@ const mockChallenges: Challenge[] = [
 // Note: This is a workaround for mock data. Real apps would fetch from a backend.
 if (typeof window !== 'undefined') {
     try {
-        const challengesToStore = mockChallenges.map(c => ({
-            ...c,
-            startDate: c.startDate.toISOString(),
-            endDate: c.endDate.toISOString(),
-            icon: undefined, // Remove React node before storing
-            requiredBooks: c.requiredBooks?.map(b => ({ ...b, addedDate: b.addedDate.toISOString() })), // Serialize dates
-        }));
-        localStorage.setItem('mockChallenges', JSON.stringify(challengesToStore));
+        // Check if data already exists to avoid overwriting potentially updated progress
+        const existingData = localStorage.getItem('mockChallenges');
+        if (!existingData) {
+            const challengesToStore = mockChallenges.map(c => ({
+                ...c,
+                startDate: c.startDate.toISOString(),
+                endDate: c.endDate.toISOString(),
+                icon: undefined, // Remove React node before storing
+                requiredBooks: c.requiredBooks?.map(b => ({ ...b, addedDate: b.addedDate.toISOString() })), // Serialize dates
+            }));
+            localStorage.setItem('mockChallenges', JSON.stringify(challengesToStore));
+        } else {
+            // Optional: Could implement logic here to merge or update existing data if needed
+            // For now, we just don't overwrite if something is already there.
+        }
     } catch (e) {
-        console.error("Failed to store mock challenges in localStorage", e);
+        console.error("Failed to store/check mock challenges in localStorage", e);
     }
 }
 
@@ -128,7 +135,7 @@ const mockDiscussionPosts = [
 ];
 
 // Mock reward balance
-const mockRewardBalance = 175;
+export const mockRewardBalance = 175; // Export for use in rewards page
 
 export default function ReadersClubPage() {
     const [discussionPost, setDiscussionPost] = React.useState('');
@@ -169,27 +176,23 @@ export default function ReadersClubPage() {
               </Link>
             </Button>
             <h1 className="text-xl font-semibold">Readers Club</h1>
-             {/* Header Actions: Challenges & Reward Icons */}
+             {/* Header Actions: Rewards & Challenges Icons */}
              <div className="flex items-center gap-1"> {/* Reduced gap slightly */}
-                {/* Reward Balance Button with Tooltip */}
-                 <Tooltip>
-                    <TooltipTrigger asChild>
-                       <Button
-                         variant="ghost"
-                         size="icon"
-                         aria-label={`Reward Balance: ${mockRewardBalance} points`}
-                         className="text-yellow-500 hover:text-yellow-600"
-                         // onClick={() => console.log("Navigate to rewards page?")} // Optional: Add click handler later
-                       >
-                         <Star className="h-5 w-5" />
-                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Reward Balance: {mockRewardBalance} points</p>
-                    </TooltipContent>
-                 </Tooltip>
+                {/* Reward Balance Button - Now a Link */}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    asChild // Render as child Link
+                    className="text-yellow-500 hover:text-yellow-600 focus-visible:ring-yellow-400"
+                    aria-label={`View Reward Balance: ${mockRewardBalance} points`}
+                >
+                    <Link href="/rewards">
+                        <Star className="h-5 w-5" />
+                    </Link>
+                </Button>
 
-                {/* Challenges Icon Button */}
+
+                {/* Challenges Icon Button with Tooltip */}
                <Tooltip>
                   <TooltipTrigger asChild>
                      {/* Make Link the direct child and apply button styles */}
