@@ -24,10 +24,13 @@ import { useRouter } from 'next/navigation'; // Import useRouter
 import { cn } from "@/lib/utils";
 
 // Simple type for profile data needed here
+// Ensure this matches the structure saved in localStorage
 type UserProfile = {
   name?: string;
-  avatarUrl?: string; // Can be a URL or a data URI
-  username?: string; // Added username
+  avatarUrl?: string;
+  username?: string; // Ensure username is part of the profile
+  email?: string; // Email might be needed for display or links
+  dob?: string | null; // Date of birth stored as string or null
 };
 
 
@@ -38,12 +41,12 @@ const top100Books = generateSampleBooks(15, 'top-100');
 
 
 export default function Home() {
-  // Simulate authentication state - replace with actual auth logic later
-  const [isLoggedIn, setIsLoggedIn] = React.useState(true); // Assume logged in for demo
+  // State hooks
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false); // Default to false
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
   const [isClient, setIsClient] = React.useState(false);
-  const [bookSearchTerm, setBookSearchTerm] = React.useState(''); // State for the book search bar
-  const [userSearchTerm, setUserSearchTerm] = React.useState(''); // State for the user search bar
+  const [bookSearchTerm, setBookSearchTerm] = React.useState('');
+  const [userSearchTerm, setUserSearchTerm] = React.useState('');
   const { toast } = useToast();
   const router = useRouter();
 
@@ -51,39 +54,46 @@ export default function Home() {
     // This effect runs only on the client after hydration
     setIsClient(true);
 
-    // TODO: Replace with actual auth check
-    // For now, we simulate based on profile presence in localStorage
+    // Check login status by reading 'userProfile' from localStorage
     const storedData = localStorage.getItem('userProfile');
-    const loggedIn = !!storedData; // Consider user logged in if profile exists
+    const loggedIn = !!storedData;
     setIsLoggedIn(loggedIn);
 
     if (loggedIn && storedData) {
-       // Access localStorage only on the client
        try {
-           // Ensure username is also parsed
-           const parsed: { name?: string; avatarUrl?: string; dob?: string; username?: string } = JSON.parse(storedData);
-           setUserProfile({ name: parsed.name, avatarUrl: parsed.avatarUrl || '', username: parsed.username });
+           // Parse the stored profile data
+           const parsedProfile: UserProfile = JSON.parse(storedData);
+           setUserProfile(parsedProfile);
        } catch (e) {
             console.error("Failed to parse user profile from localStorage", e);
-            setUserProfile({ name: 'User', avatarUrl: '', username: 'user' }); // Fallback
+            // Handle error: maybe clear broken profile and log out?
+            localStorage.removeItem('userProfile');
+            setIsLoggedIn(false);
+            setUserProfile(null);
        }
     } else {
-        setUserProfile(null); // Not logged in or no profile
+        // Not logged in or no profile found
+        setIsLoggedIn(false);
+        setUserProfile(null);
     }
   }, []); // Run only once on mount
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserProfile(null);
-    // Access localStorage only on the client
+    // Clear all relevant user data from localStorage on logout
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userProfile');
-      // Optionally clear other related storage
+      // Clear user credentials (if stored - this part depends on your setup)
+      // Example: localStorage.removeItem(`user_${userProfile?.email}`); // Be careful with this if email isn't available
+
+      // Clear other session-related data
       localStorage.removeItem('bookshelfBooks');
       localStorage.removeItem('mockChallenges');
       localStorage.removeItem('mockRewardTransactions');
-      localStorage.removeItem('mockRecommendations'); // Clear recommendations too
-      localStorage.removeItem('theme'); // Clear theme preference
+      localStorage.removeItem('mockRecommendations');
+      localStorage.removeItem('theme');
+
       // Clear cookie
        document.cookie = "bookshelf_last_tab=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
        // Remove dark class on logout
@@ -93,7 +103,8 @@ export default function Home() {
       title: "Logged Out",
       description: "You have been successfully logged out.",
     });
-     // Consider redirecting: router.push('/login');
+     // Redirect to login page might be better UX
+     router.push('/login');
   };
 
    const getInitials = (name: string | undefined): string => {
@@ -126,7 +137,6 @@ export default function Home() {
    const handleUserSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!userSearchTerm.trim()) return;
-        // Navigate to user search results page (e.g., /users/search)
         router.push(`/users/search?q=${encodeURIComponent(userSearchTerm.trim())}`);
    };
    const handleMobileUserSearchClick = () => {
@@ -139,7 +149,6 @@ export default function Home() {
 
    // Function to handle navigation, checks login status for protected routes
    const navigate = (path: string) => {
-       // Use isClient flag to ensure this only runs client-side
        if (!isClient) return; // Don't navigate during SSR or before hydration
 
        if (!isLoggedIn) {
@@ -153,8 +162,6 @@ export default function Home() {
                   </Button>
                ),
            });
-           // Consider redirecting immediately after toast or let user click action
-           // router.push('/login');
        } else {
            router.push(path);
        }
@@ -185,7 +192,7 @@ export default function Home() {
                       placeholder="Search books..."
                       value={bookSearchTerm}
                       onChange={(e) => setBookSearchTerm(e.target.value)}
-                      className="pl-10 h-9 text-sm" // Add padding for icon
+                      className="pl-10 h-9 text-sm"
                       aria-label="Search for books"
                   />
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -197,7 +204,7 @@ export default function Home() {
                       placeholder="Search users..."
                       value={userSearchTerm}
                       onChange={(e) => setUserSearchTerm(e.target.value)}
-                      className="pl-10 h-9 text-sm" // Add padding for icon
+                      className="pl-10 h-9 text-sm"
                       aria-label="Search for users"
                   />
                   <UserSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -216,13 +223,13 @@ export default function Home() {
                         placeholder="Books..."
                         value={bookSearchTerm}
                         onChange={(e) => setBookSearchTerm(e.target.value)}
-                        className="pl-7 h-9 text-sm w-24" // Shorter input
+                        className="pl-7 h-9 text-sm w-24"
                         aria-label="Search books"
                     />
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7" // Smaller button
+                        className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7"
                         onClick={handleMobileBookSearchClick}
                         aria-label="Submit book search"
                     >
@@ -236,13 +243,13 @@ export default function Home() {
                          placeholder="Users..."
                          value={userSearchTerm}
                          onChange={(e) => setUserSearchTerm(e.target.value)}
-                         className="pl-7 h-9 text-sm w-24" // Shorter input
+                         className="pl-7 h-9 text-sm w-24"
                          aria-label="Search users"
                      />
                      <Button
                          variant="ghost"
                          size="icon"
-                         className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7" // Smaller button
+                         className="absolute right-0 top-1/2 -translate-y-1/2 h-9 w-7"
                          onClick={handleMobileUserSearchClick}
                          aria-label="Submit user search"
                      >
@@ -252,7 +259,7 @@ export default function Home() {
             </div>
 
 
-            {/* Action Icons */}
+            {/* Action Icons - Use navigate function */}
             <Button variant="ghost" size="icon" onClick={() => navigate('/recommendations')} aria-label="Recommendations">
                 <Gift className="h-5 w-5" />
             </Button>
@@ -268,7 +275,7 @@ export default function Home() {
 
 
               {/* Profile Dropdown or Login Button */}
-              {isClient && (
+              {isClient && ( // Render only after client-side check
                 isLoggedIn && userProfile ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -282,17 +289,16 @@ export default function Home() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>{userProfile.name || 'My Account'}</DropdownMenuLabel>
+                      <DropdownMenuLabel>{userProfile.name || userProfile.username || 'My Account'}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild className="cursor-pointer">
-                        {/* Use navigate function for profile link */}
-                        {/* Updated to use username if available */}
-                        <button onClick={() => navigate(`/profile/${userProfile.username || ''}`)} className="flex items-center w-full">
-                          <User className="mr-2 h-4 w-4" />
-                          <span>Profile Details</span>
-                        </button>
-                      </DropdownMenuItem>
-                       {/* Link to Settings */}
+                       {/* Profile link uses username */}
+                       <DropdownMenuItem asChild className="cursor-pointer">
+                           <button onClick={() => navigate(`/profile/${userProfile.username || ''}`)} className="flex items-center w-full">
+                             <User className="mr-2 h-4 w-4" />
+                             <span>My Profile</span>
+                           </button>
+                       </DropdownMenuItem>
+                       {/* Settings link */}
                        <DropdownMenuItem asChild className="cursor-pointer">
                            <button onClick={() => navigate('/settings')} className="flex items-center w-full">
                              <Settings className="mr-2 h-4 w-4" />
@@ -328,14 +334,6 @@ export default function Home() {
 
       </main>
 
-       {/* Optional Footer */}
-       {/*
-       <footer className="mt-auto border-t bg-muted/40 py-4">
-         <div className="container text-center text-sm text-muted-foreground">
-            BookBurst © {new Date().getFullYear()}
-         </div>
-       </footer>
-       */}
     </div>
   );
 }

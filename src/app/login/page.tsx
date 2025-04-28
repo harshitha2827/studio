@@ -46,41 +46,77 @@ export default function LoginPage() {
   });
 
   const onSubmit = (data: LoginFormValues) => {
-    // Placeholder for actual login logic
     console.log('Login attempt with:', data.email); // Avoid logging password
 
-    // --- TODO: Implement actual authentication ---
-    // 1. Send `data.email` and `data.password` to your backend/auth provider.
-    // 2. Handle the response:
-    //    - On success: Store the user session/token (e.g., in cookies or localStorage)
-    //                 Store minimal profile data (name, avatarUrl) in localStorage for quick UI updates.
-    //                 Redirect to the home page or intended destination.
-    //    - On failure: Show an appropriate error toast.
+    // --- Implement actual authentication using localStorage ---
+    if (typeof window !== 'undefined') {
+        // 1. Retrieve stored user data based on email
+        const storedUserRaw = localStorage.getItem(`user_${data.email}`);
 
-    // **Mock Success Simulation:**
-    // For demonstration, we'll simulate a successful login and save mock data.
-    const mockUserProfile = {
-      name: 'Mock User',
-      email: data.email,
-      username: data.email.split('@')[0], // Create a simple username
-      avatarUrl: '', // Default or generate a mock avatar
-      dob: null, // Or a mock date
-    };
-    localStorage.setItem('userProfile', JSON.stringify(mockUserProfile));
+        if (!storedUserRaw) {
+            toast({
+                title: 'Login Failed',
+                description: 'Invalid email or password.',
+                variant: 'destructive',
+            });
+            return;
+        }
 
-    toast({
-      title: 'Login Successful',
-      description: 'Welcome back! Redirecting...',
-    });
-    // In a real app, redirect after successful auth confirmation
-    router.push('/');
+        try {
+            const storedUserData = JSON.parse(storedUserRaw);
+
+            // 2. Compare entered password with stored password (Insecure!)
+            if (storedUserData.password === data.password) {
+                // --- Success ---
+                // 3. Create and store the basic profile to simulate session
+                const userProfile = {
+                    name: storedUserData.username, // Use stored username as initial name
+                    email: storedUserData.email,
+                    username: storedUserData.username,
+                    avatarUrl: '', // Load actual avatar later if stored separately
+                    dob: null,     // Load actual DOB later if stored separately
+                };
+                localStorage.setItem('userProfile', JSON.stringify(userProfile));
+
+                toast({
+                  title: 'Login Successful',
+                  description: 'Welcome back! Redirecting...',
+                });
+                // 4. Redirect to home page
+                router.push('/');
+
+            } else {
+                 // --- Failure (Incorrect Password) ---
+                 toast({
+                    title: 'Login Failed',
+                    description: 'Invalid email or password.',
+                    variant: 'destructive',
+                 });
+            }
+        } catch (e) {
+            console.error("Error parsing stored user data:", e);
+            toast({
+                title: 'Login Error',
+                description: 'An error occurred during login. Please try again.',
+                variant: 'destructive',
+            });
+        }
+
+    } else {
+        // Handle case where localStorage is not available
+        toast({
+          title: 'Login Error',
+          description: 'Could not access storage. Please try again.',
+          variant: 'destructive',
+        });
+    }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Login to BookBurst</CardTitle> {/* Updated Name */}
+          <CardTitle className="text-2xl">Login to BookBurst</CardTitle>
           <CardDescription>
             Enter your email below to login to your account
           </CardDescription>
@@ -125,7 +161,6 @@ export default function LoginPage() {
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col items-center text-sm">
-           {/* Links for signup and back to bookshelf */}
            <div className="mt-4 text-center text-muted-foreground">
              Don't have an account?{' '}
              <Link href="/signup" className="underline text-primary hover:text-primary/80">

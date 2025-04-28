@@ -45,55 +45,54 @@ const profileSchema = z.object({
     .string()
     .min(3, 'Username must be at least 3 characters')
     .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-  email: z.string().email('Invalid email address'), // Assuming email is fetched and read-only for now
+  email: z.string().email('Invalid email address'), // Email is read-only
   dob: z.date().optional(), // Date of Birth is optional
-  avatarUrl: z.string().optional().or(z.literal('')).refine(url => !url || url.startsWith('data:image/') || /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp)).*$/.test(url), {
+  avatarUrl: z.string().url("Must be a valid image URL or data URI.").optional().or(z.literal('')).refine(url => !url || url.startsWith('data:image/') || /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp)).*$/.test(url), {
         message: "Avatar must be a valid image data URI or URL.",
     }), // Optional Avatar URL or data URI validated
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-// Mock function to get user data (replace with actual data fetching)
-const fetchUserData = (): ProfileFormValues => {
-   if (typeof window !== 'undefined') {
-     const storedData = localStorage.getItem('userProfile');
-     if (storedData) {
-       try {
-           const parsed = JSON.parse(storedData);
-           // Ensure avatarUrl exists and dob is parsed correctly
-           return {
-                name: parsed.name || '', // Default to empty string if missing
-                username: parsed.username || '', // Default to empty string if missing
-                email: parsed.email || 'user@example.com', // Default email
-                dob: parsed.dob ? new Date(parsed.dob) : undefined,
-                avatarUrl: parsed.avatarUrl || '',
-            };
-        } catch (e) {
-            console.error("Failed to parse user profile:", e);
-        }
-     }
-   }
-  // Default mock data if nothing is stored or error occurs
-  return {
-    name: 'Alex Doe',
-    username: 'alex_doe',
-    email: 'alex.doe@example.com',
-    dob: undefined,
-    avatarUrl: '', // Default empty avatar URL
-  };
-};
+// **Removed fetchUserData - will load directly from localStorage in useEffect**
 
-// Mock function to save user data (replace with actual API call)
+// Function to save user data to localStorage
 const saveUserData = (data: ProfileFormValues) => {
    if (typeof window !== 'undefined') {
-    // Convert date to string for storage if it exists
+    // Retrieve the full user data (including password if stored - insecure!)
+    const storedUserRaw = localStorage.getItem(`user_${data.email}`);
+    let fullUserData = {};
+    if (storedUserRaw) {
+        try {
+            fullUserData = JSON.parse(storedUserRaw);
+        } catch (e) {
+            console.error("Failed to parse existing user data for save:", e);
+        }
+    }
+
+    // Merge updated profile data with existing data (like password)
     const dataToStore = {
-      ...data,
-      dob: data.dob ? data.dob.toISOString() : null,
-      avatarUrl: data.avatarUrl || '', // Ensure avatarUrl is stored
+      ...fullUserData, // Keep existing fields like password
+      name: data.name,
+      username: data.username,
+      email: data.email, // Ensure email is saved
+      dob: data.dob ? data.dob.toISOString() : null, // Convert date to string
+      avatarUrl: data.avatarUrl || '', // Ensure avatarUrl is saved
     };
-    localStorage.setItem('userProfile', JSON.stringify(dataToStore));
+
+    // Save the merged data back to the user-specific key
+    localStorage.setItem(`user_${data.email}`, JSON.stringify(dataToStore));
+
+    // Also update the 'userProfile' key for current session display
+     const profileDataForSession = {
+        name: data.name,
+        username: data.username,
+        email: data.email,
+        avatarUrl: data.avatarUrl || '',
+        dob: data.dob ? data.dob.toISOString() : null,
+     };
+    localStorage.setItem('userProfile', JSON.stringify(profileDataForSession));
+
    }
   console.log('Saving user data:', data);
   // Simulate API call delay
@@ -110,16 +109,21 @@ export default function ProfilePage() {
   // Fetch user data only if logged in
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {}, // Initialize empty, load data in useEffect
+    defaultValues: { // Set explicit defaults matching the schema
+        name: '',
+        username: '',
+        email: '',
+        dob: undefined,
+        avatarUrl: '',
+    },
   });
 
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Watch name for fallback initials
+  // Watch form fields
   const userName = form.watch("name");
-  // Watch avatarUrl for preview and error handling
   const watchedAvatarUrl = form.watch("avatarUrl");
 
   // Mock follower/following counts - Reset to 0
@@ -128,19 +132,61 @@ export default function ProfilePage() {
 
   // Effect for checking login status and loading data
   React.useEffect(() => {
+    setIsLoading(true); // Start loading
     // Check login status on client mount
-    const userProfileExists = localStorage.getItem('userProfile');
-    const loggedIn = !!userProfileExists;
+    const userProfileRaw = localStorage.getItem('userProfile');
+    const loggedIn = !!userProfileRaw;
     setIsLoggedIn(loggedIn);
 
-     if (loggedIn) {
+     if (loggedIn && userProfileRaw) {
         // Load user data if logged in
-        const userData = fetchUserData();
-        form.reset(userData); // Reset form with fetched data
-        setImagePreview(userData.avatarUrl || null);
-        // TODO: In a real app, fetch actual follower/following counts here
-        // For now, they remain 0 as initialized above
+        try {
+            const storedProfile = JSON.parse(userProfileRaw);
+            // **Load the full data from the user-specific key for editing**
+             const storedUserRaw = localStorage.getItem(`user_${storedProfile.email}`);
+             let userDataForForm: ProfileFormValues = { // Initialize with defaults
+                 name: '',
+                 username: '',
+                 email: storedProfile.email || '', // Use email from profile as key
+                 dob: undefined,
+                 avatarUrl: '',
+             };
+
+             if (storedUserRaw) {
+                const storedUserData = JSON.parse(storedUserRaw);
+                // Map the stored data (which might include password etc.) to the form values
+                userDataForForm = {
+                    name: storedUserData.name || storedProfile.name || '', // Fallback logic
+                    username: storedUserData.username || storedProfile.username || '',
+                    email: storedUserData.email || storedProfile.email || '',
+                    dob: storedUserData.dob ? new Date(storedUserData.dob) : undefined,
+                    avatarUrl: storedUserData.avatarUrl || '',
+                };
+             } else {
+                 // If user-specific data is missing (should ideally not happen if logged in), use profile data
+                 userDataForForm = {
+                     name: storedProfile.name || '',
+                     username: storedProfile.username || '',
+                     email: storedProfile.email || '',
+                     dob: storedProfile.dob ? new Date(storedProfile.dob) : undefined,
+                     avatarUrl: storedProfile.avatarUrl || '',
+                 };
+             }
+
+            form.reset(userDataForForm); // Reset form with loaded data
+            setImagePreview(userDataForForm.avatarUrl || null);
+            // TODO: Fetch actual follower/following counts
+        } catch (e) {
+             console.error("Failed to parse user profile or data:", e);
+             toast({ title: "Error Loading Profile", description: "Could not load profile data.", variant: "destructive" });
+             // Log out the user if data is corrupted
+             localStorage.removeItem('userProfile');
+             localStorage.removeItem(`user_${form.getValues('email')}`); // Attempt cleanup
+             setIsLoggedIn(false);
+             router.push('/login'); // Redirect to login
+        }
     } else {
+         // Not logged in
          toast({
              title: "Login Required",
              description: "Please log in to view your profile.",
@@ -151,40 +197,39 @@ export default function ProfilePage() {
                   </Button>
               ),
          });
-         // Redirect if not logged in
+         // Optional: Redirect if not logged in
          // router.push('/login');
     }
     setIsLoading(false); // Finish loading check
-  }, [form, router, toast]); // Add form, router, toast to dependencies
+  }, [form, router, toast]); // Add dependencies
 
   // Effect for updating image preview when watchedAvatarUrl changes
   React.useEffect(() => {
-      setImagePreview(watchedAvatarUrl || null); // Use null instead of empty string for consistency
+      setImagePreview(watchedAvatarUrl || null);
   }, [watchedAvatarUrl]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // Example: 5MB limit
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
            form.setError('avatarUrl', { type: 'manual', message: 'Image size should not exceed 5MB.' });
-           setImagePreview(form.getValues('avatarUrl') || null); // Reset preview to original if error
+           setImagePreview(form.getValues('avatarUrl') || null);
            return;
        }
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
         setImagePreview(result);
-        form.setValue('avatarUrl', result, { shouldValidate: true, shouldDirty: true }); // Update form value with data URL and validate
-        form.clearErrors('avatarUrl'); // Clear previous errors on successful load
+        form.setValue('avatarUrl', result, { shouldValidate: true, shouldDirty: true });
+        form.clearErrors('avatarUrl');
       };
       reader.onerror = () => {
         form.setError('avatarUrl', { type: 'manual', message: 'Failed to read image file.' });
-        setImagePreview(form.getValues('avatarUrl') || null); // Reset preview on error
+        setImagePreview(form.getValues('avatarUrl') || null);
       };
       reader.readAsDataURL(file);
     }
-    // Reset the input value to allow selecting the same file again if needed
      if (event.target) {
        event.target.value = '';
      }
@@ -196,16 +241,12 @@ export default function ProfilePage() {
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
-      // The avatarUrl field now contains the data URL from the preview or original URL
       await saveUserData(data);
       toast({
         title: 'Profile Updated',
         description: 'Your profile information has been saved successfully.',
       });
-       // Reset the form with the *saved* data to clear dirty state
-       // and ensure the form values match the persisted state.
-       form.reset(data);
-       // Explicitly update the preview state after reset to match the saved data
+       form.reset(data); // Reset form with the *saved* data
        setImagePreview(data.avatarUrl || null);
     } catch (error) {
         console.error("Error saving profile:", error);
@@ -223,7 +264,7 @@ export default function ProfilePage() {
     const names = name.split(' ');
     return names
       .map((n) => n[0])
-      .slice(0, 2) // Take first letter of first two names
+      .slice(0, 2)
       .join('')
       .toUpperCase();
   };
@@ -233,7 +274,6 @@ export default function ProfilePage() {
     return (
         <div className="flex min-h-screen items-center justify-center p-4">
             <p className="text-lg text-muted-foreground">Loading profile...</p>
-             {/* Optional: Add a spinner */}
         </div>
     );
   }
@@ -267,18 +307,18 @@ export default function ProfilePage() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept="image/png, image/jpeg, image/gif, image/webp" // Be specific about accepted types
+            accept="image/png, image/jpeg, image/gif, image/webp"
             style={{ display: 'none' }}
-            aria-hidden="true" // Hide from accessibility tree
+            aria-hidden="true"
         />
         <input
             type="file"
             ref={cameraInputRef}
             onChange={handleFileChange}
             accept="image/*"
-            capture="user" // Trigger camera on mobile
+            capture="user"
             style={{ display: 'none' }}
-            aria-hidden="true" // Hide from accessibility tree
+            aria-hidden="true"
         />
 
        <Card className="w-full max-w-2xl shadow-lg relative">
@@ -286,15 +326,15 @@ export default function ProfilePage() {
             variant="ghost"
             size="icon"
             className="absolute top-4 left-4 text-muted-foreground hover:text-foreground z-10"
-            onClick={() => router.push('/')} // Navigate home instead of back
-            aria-label="Back to Home" // Updated Label
+            onClick={() => router.push('/')}
+            aria-label="Back to Home"
           >
            <ArrowLeft className="h-5 w-5" />
          </Button>
 
-        <Form {...form}> {/* Form provider now wraps the entire form including avatar */}
+        <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-                {/* Avatar Display & Upload Buttons - Moved inside Form */}
+                {/* Avatar Display & Upload Buttons */}
                 <div className="flex flex-col items-center pt-8">
                     <Avatar className="h-24 w-24 border-4 border-background shadow-md mb-2">
                         <AvatarImage src={imagePreview || undefined} alt={userName || 'User Profile'} />
@@ -321,16 +361,14 @@ export default function ProfilePage() {
                             <Camera className="mr-2 h-4 w-4" /> Capture
                          </Button>
                      </div>
-                     {/* FormMessage for avatarUrl, now correctly inside the Form context */}
+                     {/* FormMessage for avatarUrl */}
                      <FormField
                         control={form.control}
-                        name="avatarUrl" // Needs to be part of a FormField to show message correctly
+                        name="avatarUrl"
                         render={({ field }) => (
-                            <FormItem className="h-4 mt-1"> {/* Adjusted spacing/height */}
+                            <FormItem className="h-4 mt-1">
                                 <FormMessage className="text-xs text-center"/>
-                                {/* Hidden input managed by buttons/state, still needed for RHF */}
                                 <FormControl>
-                                    {/* Use hidden input for RHF, actual file input is separate */}
                                     <input type="hidden" {...field} value={field.value ?? ''} />
                                 </FormControl>
                             </FormItem>
@@ -338,7 +376,7 @@ export default function ProfilePage() {
                      />
                  </div>
 
-                <CardHeader className="text-center pt-4"> {/* Adjusted padding-top */}
+                <CardHeader className="text-center pt-4">
                   <CardTitle className="text-2xl">Profile Details</CardTitle>
                   <CardDescription>
                     View and update your personal information.
@@ -378,7 +416,7 @@ export default function ProfilePage() {
                         )}
                       />
 
-                      {/* Email Field (Read-Only Example) */}
+                      {/* Email Field (Read-Only) */}
                       <FormField
                         control={form.control}
                         name="email"
@@ -447,10 +485,27 @@ export default function ProfilePage() {
                             type="button"
                             variant="outline"
                             onClick={() => {
-                                // Reload default data for the logged-in user
-                                const defaultData = fetchUserData();
-                                form.reset(defaultData);
-                                setImagePreview(defaultData.avatarUrl || null); // Reset preview as well
+                                // Reload original data from localStorage to cancel changes
+                                const profileRaw = localStorage.getItem('userProfile');
+                                if (profileRaw) {
+                                    try {
+                                        const profile = JSON.parse(profileRaw);
+                                        const userRaw = localStorage.getItem(`user_${profile.email}`);
+                                        if (userRaw) {
+                                            const userData = JSON.parse(userRaw);
+                                            form.reset({
+                                                name: userData.name || '',
+                                                username: userData.username || '',
+                                                email: userData.email || '',
+                                                dob: userData.dob ? new Date(userData.dob) : undefined,
+                                                avatarUrl: userData.avatarUrl || '',
+                                            });
+                                            setImagePreview(userData.avatarUrl || null);
+                                        }
+                                    } catch (e) {
+                                        console.error("Error reloading original data:", e);
+                                    }
+                                }
                             }}
                             disabled={!form.formState.isDirty || form.formState.isSubmitting}
                           >

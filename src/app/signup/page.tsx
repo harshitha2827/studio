@@ -51,37 +51,58 @@ export default function SignupPage() {
   });
 
   const onSubmit = (data: SignupFormValues) => {
-    // Placeholder for actual signup logic
     console.log('Signup attempt with:', { email: data.email }); // Avoid logging password
 
-    // --- TODO: Implement actual signup ---
-    // 1. Send `data.email` and `data.password` to your backend/auth provider.
-    // 2. Handle the response:
-    //    - On success: Log the user in immediately (store session/token)
-    //                 Create a basic profile in localStorage (or fetch from backend)
-    //                 Redirect to home page.
-    //    - On failure (e.g., email exists): Show an error toast.
+    // --- Implement actual signup using localStorage ---
+    if (typeof window !== 'undefined') {
+        // 1. Check if email already exists
+        const existingUserRaw = localStorage.getItem(`user_${data.email}`);
+        if (existingUserRaw) {
+            toast({
+                title: 'Signup Failed',
+                description: 'An account with this email already exists. Please log in.',
+                variant: 'destructive',
+            });
+            return; // Stop signup process
+        }
 
-    // **Mock Success Simulation:**
-    // For demonstration, we'll simulate a successful signup and save mock data.
-    const mockUserProfile = {
-      name: `User_${data.email.split('@')[0]}`, // Create a simple name
-      email: data.email,
-      username: data.email.split('@')[0], // Create a simple username
-      avatarUrl: '', // Default avatar
-      dob: null,
-    };
-    localStorage.setItem('userProfile', JSON.stringify(mockUserProfile));
-    // Show success toast
-    toast({
-      title: 'Signup Successful',
-      description: 'Welcome! Redirecting you to the home page...',
-    });
+        // 2. Store user credentials (Insecure - for demonstration only)
+        const userData = {
+            email: data.email,
+            password: data.password, // Storing plain password - highly insecure!
+            username: data.email.split('@')[0] || `user_${Date.now()}`, // Generate username
+        };
+        localStorage.setItem(`user_${data.email}`, JSON.stringify(userData));
 
-    // Redirect to home page after a short delay to allow toast visibility
-    setTimeout(() => {
-      router.push('/');
-    }, 1500); // Redirect after 1.5 seconds
+        // 3. Create and store the basic profile for immediate login
+        const userProfile = {
+            name: userData.username, // Use username as initial name
+            email: data.email,
+            username: userData.username,
+            avatarUrl: '', // Default avatar
+            dob: null,
+        };
+        localStorage.setItem('userProfile', JSON.stringify(userProfile));
+
+        // 4. Show success toast
+        toast({
+          title: 'Signup Successful',
+          description: 'Welcome! Redirecting you to the home page...',
+        });
+
+        // 5. Redirect to home page after a short delay
+        setTimeout(() => {
+          router.push('/');
+        }, 1500); // Redirect after 1.5 seconds
+
+    } else {
+        // Handle case where localStorage is not available (should not happen in browser)
+        toast({
+          title: 'Signup Error',
+          description: 'Could not access storage. Please try again.',
+          variant: 'destructive',
+        });
+    }
   };
 
   return (
@@ -90,7 +111,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your email and password to sign up for BookBurst {/* Updated Name */}
+            Enter your email and password to sign up for BookBurst
           </CardDescription>
         </CardHeader>
         <CardContent>
