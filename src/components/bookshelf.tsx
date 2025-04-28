@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { getCookie, setCookie } from "@/lib/cookies";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { DialogTrigger } from "@/components/ui/dialog"; // Need DialogTrigger for the hidden edit trigger
+// Removed DialogTrigger import as it's no longer needed here
 import { generateSampleBooks } from '@/lib/mock-data'; // Use mock data generator
 
 const BOOKSHELF_TAB_COOKIE = "bookshelf_last_tab";
@@ -25,6 +25,7 @@ export function Bookshelf() {
   const [isClient, setIsClient] = React.useState(false); // State to track client-side mount
 
   const [editingBook, setEditingBook] = React.useState<Book | null>(null);
+  const [isFormOpen, setIsFormOpen] = React.useState(false); // State to control AddBookForm dialog
   const [bookToDelete, setBookToDelete] = React.useState<string | null>(null);
   // Initialize tab state with default for SSR/initial render
   const [activeTab, setActiveTab] = React.useState<ReadingStatus>(DEFAULT_TAB);
@@ -151,17 +152,12 @@ export function Bookshelf() {
        });
     });
     setEditingBook(null); // Clear editing state
+    setIsFormOpen(false); // Close the dialog
   };
 
   const handleEdit = (book: Book) => {
     setEditingBook(book);
-     // Find the hidden trigger button and click it programmatically
-     const triggerButton = document.getElementById(`edit-trigger-${book.id}`);
-     if (triggerButton) {
-       triggerButton.click();
-     } else {
-         console.warn("Could not find trigger button for editing.");
-     }
+    setIsFormOpen(true); // Open the dialog for editing
   };
 
  const handleDeleteConfirm = (id: string) => {
@@ -193,6 +189,15 @@ export function Bookshelf() {
       description: `Book rating set to ${rating} stars.`,
     });
   };
+
+  // Handle closing the form dialog - ensures editingBook is cleared
+  const handleFormOpenChange = (open: boolean) => {
+      setIsFormOpen(open);
+      if (!open) {
+          setEditingBook(null); // Clear editing state when dialog closes
+      }
+  }
+
 
   // Filter books based on current state and ensure sorting is applied
   const filteredBooks = (status: ReadingStatus) =>
@@ -240,16 +245,18 @@ export function Bookshelf() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-       {/* Header Row: Title and Add Button */}
+       {/* Header Row: Title and Add Button/Form */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold text-primary">My Bookshelf</h1>
-         <AddBookForm onBookSave={handleBookSave} initialBook={editingBook} />
-         {/* Hidden trigger for editing */}
-         {editingBook && (
-            <DialogTrigger asChild id={`edit-trigger-${editingBook.id}`} style={{ display: 'none' }}>
-                 <button>Hidden Edit Trigger</button>
-            </DialogTrigger>
-         )}
+         {/* AddBookForm component is now controlled by isFormOpen state */}
+         {/* The "Add New Book" button is now inside AddBookForm */}
+         <AddBookForm
+           onBookSave={handleBookSave}
+           initialBook={editingBook}
+           isOpen={isFormOpen}
+           setIsOpen={handleFormOpenChange} // Pass the state setter
+         />
+         {/* Hidden trigger removed */}
       </div>
 
         {/* Controls Row: Search and Tabs */}
@@ -287,7 +294,7 @@ export function Bookshelf() {
                   <BookCard
                     key={book.id} // Use book.id which should be stable
                     book={book}
-                    onEdit={() => handleEdit(book)}
+                    onEdit={() => handleEdit(book)} // This now sets state and opens dialog
                     onDelete={() => setBookToDelete(book.id)} // Trigger delete confirmation
                     onStatusChange={handleStatusChange}
                     onRatingChange={handleRatingChange}

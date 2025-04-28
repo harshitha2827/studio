@@ -62,21 +62,24 @@ type BookFormData = z.infer<typeof bookSchema>;
 interface AddBookFormProps {
   onBookSave: (book: Book) => void;
   initialBook?: Book | null; // For editing
+  isOpen: boolean; // Control dialog visibility externally
+  setIsOpen: (open: boolean) => void; // Handler to change visibility
 }
 
-export function AddBookForm({ onBookSave, initialBook }: AddBookFormProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+export function AddBookForm({ onBookSave, initialBook, isOpen, setIsOpen }: AddBookFormProps) {
+  // Removed internal isOpen state, now controlled by props
   const { toast } = useToast();
   const form = useForm<BookFormData>({
     resolver: zodResolver(bookSchema),
+    // Default values are set based on initialBook when the form is reset
     defaultValues: {
-      title: initialBook?.title ?? "",
-      author: initialBook?.author ?? "",
-      status: initialBook?.status ?? "want-to-read",
-      rating: initialBook?.rating ?? 0,
-      notes: initialBook?.notes ?? "",
-      coverUrl: initialBook?.coverUrl ?? "",
-      isbn: initialBook?.isbn ?? "",
+      title: "",
+      author: "",
+      status: "want-to-read",
+      rating: 0,
+      notes: "",
+      coverUrl: "",
+      isbn: "",
     },
   });
 
@@ -96,18 +99,9 @@ export function AddBookForm({ onBookSave, initialBook }: AddBookFormProps) {
           isbn: initialBook?.isbn ?? "",
         });
     } else {
-        // Optionally clear form when closing if not editing
-        if (!initialBook) {
-             form.reset({ // Reset to default when adding new
-                title: "",
-                author: "",
-                status: "want-to-read",
-                rating: 0,
-                notes: "",
-                coverUrl: "",
-                isbn: "",
-              });
-        }
+        // Optionally clear form when closing if not editing (or always clear if desired)
+        // This might need adjustment depending on desired behavior when closing without saving edits
+        // form.reset({...}); // Reset to defaults or previous state if needed
     }
   }, [initialBook, form, isOpen]); // Depend on isOpen to reset when dialog opens
 
@@ -132,22 +126,29 @@ export function AddBookForm({ onBookSave, initialBook }: AddBookFormProps) {
       description: `${data.title} has been successfully ${initialBook ? 'updated' : 'added'}.`,
     });
     setIsOpen(false); // Close dialog on successful save
-    // Don't reset form here, useEffect handles it based on isOpen and initialBook
+  };
+
+  // Handle programmatic closing via the X button or overlay click
+  const handleOpenChange = (open: boolean) => {
+      setIsOpen(open);
+      // If closing, ensure the parent knows to clear the editingBook state
+      // This is implicitly handled by setIsOpen(false) triggering useEffect in parent
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {initialBook ? (
-           // If used for editing, trigger might be external (e.g., an edit button)
-           // This button serves as a placeholder or can be used if needed directly
-           <Button variant="ghost" size="sm">Edit</Button>
-        ) : (
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Book
-        </Button>
-         )}
-      </DialogTrigger>
+    // Dialog open state and change handler are now controlled by props
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      {/* Trigger is now handled externally in the parent (Bookshelf) */}
+      {/* However, we might still need a visible trigger for ADDING a book */}
+      {!initialBook && (
+        <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Book
+            </Button>
+        </DialogTrigger>
+      )}
+      {/* The Edit button on the card triggers the dialog via parent state */}
+
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>{initialBook ? "Edit Book" : "Add New Book"}</DialogTitle>
@@ -269,6 +270,7 @@ export function AddBookForm({ onBookSave, initialBook }: AddBookFormProps) {
               )}
             />
             <DialogFooter>
+              {/* DialogClose now implicitly calls onOpenChange(false) */}
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
