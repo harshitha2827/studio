@@ -277,7 +277,7 @@ export default function ProfilePage() {
             size="icon"
             className="absolute top-4 left-4 text-muted-foreground hover:text-foreground z-10"
             onClick={() => router.push('/')}
-            aria-label="Back to BookShelfie" /* Updated Label */
+            aria-label="Back to BookBurst" /* Updated Label */
           >
            <ArrowLeft className="h-5 w-5" />
          </Button>
