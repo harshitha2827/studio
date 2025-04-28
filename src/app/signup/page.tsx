@@ -76,7 +76,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your email and password to sign up for BookBust {/* Updated Name */}
+            Enter your email and password to sign up for BookBurst {/* Updated Name */}
           </CardDescription>
         </CardHeader>
         <CardContent>
