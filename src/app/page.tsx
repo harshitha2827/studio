@@ -89,27 +89,32 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
+          // Remove keys starting with 'user_' to delete stored credentials
           if (key && key.startsWith('user_')) {
+              keysToRemove.push(key);
+          }
+          // Remove keys for challenge progress
+          if (key && key.startsWith('challengeProgress_')) {
               keysToRemove.push(key);
           }
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
 
-      // Clear other session-related data
+      // Clear other session-related data explicitly
       localStorage.removeItem('bookshelfBooks');
       localStorage.removeItem('mockChallenges');
       localStorage.removeItem('mockRewardTransactions');
       localStorage.removeItem('mockRecommendations');
-      localStorage.removeItem('theme');
+      localStorage.removeItem('theme'); // Also reset theme preference
 
-      // Clear cookie
+      // Clear cookie for last bookshelf tab
        document.cookie = "bookshelf_last_tab=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-       // Remove dark class on logout
+       // Remove dark class from HTML element on logout
        document.documentElement.classList.remove('dark');
     }
     toast({
       title: "Logged Out & Data Reset",
-      description: "You have been logged out and user data has been cleared.",
+      description: "You have been logged out and all user data has been cleared.",
     });
      // Redirect to login page might be better UX
      router.push('/login');
@@ -321,7 +326,7 @@ export default function Home() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
+                        <span>Log out & Reset Data</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -350,5 +355,4 @@ export default function Home() {
     </div>
   );
 }
-
     
