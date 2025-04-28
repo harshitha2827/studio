@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'; // For discussion input
 import { Textarea } from '@/components/ui/textarea'; // For discussion input
 import type { Book } from '@/interfaces/book';
 import { Progress } from '@/components/ui/progress'; // Import Progress component
+import { format } from 'date-fns'; // Import date-fns format function
 
 // --- Enhanced Mock Data (Could be moved to a separate file later) ---
 
@@ -120,6 +121,11 @@ const mockDiscussionPosts = [
 
 export default function ReadersClubPage() {
     const [discussionPost, setDiscussionPost] = React.useState('');
+    const [isClient, setIsClient] = React.useState(false); // State to track client mount
+
+    React.useEffect(() => {
+        setIsClient(true); // Set client state to true once mounted
+    }, []);
 
     const handlePostSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -206,7 +212,8 @@ export default function ReadersClubPage() {
                                 <p className="text-sm font-medium text-foreground">{post.userName}</p>
                                 <p className="mt-1 text-sm text-foreground/90">{post.text}</p>
                                 <p className="mt-1 text-xs text-muted-foreground/70">
-                                    {post.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - {post.timestamp.toLocaleDateString()}
+                                    {/* Format date/time consistently only on the client */}
+                                    {isClient ? `${format(post.timestamp, 'p')} - ${format(post.timestamp, 'P')}` : 'Loading date...'}
                                 </p>
                             </div>
                         </div>
@@ -262,16 +269,16 @@ export default function ReadersClubPage() {
         {/* Members Section */}
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center">Club Members ({mockUsers.length})</CardTitle>
+            <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Club Members ({mockUsers.length})</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
             {mockUsers.map(member => (
-              <div key={member.id} className="flex flex-col items-center gap-1">
+              <div key={member.id} className="flex flex-col items-center gap-1 text-center w-16">
                 <Avatar className="h-10 w-10 border">
                   <AvatarImage src={member.avatarUrl} alt={member.name} />
                   <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                 </Avatar>
-                <span className="text-xs text-muted-foreground">{member.name}</span>
+                <span className="text-xs text-muted-foreground truncate w-full">{member.name}</span>
               </div>
             ))}
           </CardContent>
@@ -284,3 +291,5 @@ export default function ReadersClubPage() {
     </div>
   );
 }
+
+    
