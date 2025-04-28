@@ -46,7 +46,7 @@ export default function BookDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [currentStatus, setCurrentStatus] = React.useState<ReadingStatus | undefined>(undefined);
   const [currentRating, setCurrentRating] = React.useState<number>(0);
-  const [comment, setComment] = React.useState('');
+  const [comment, setComment] = React.useState(''); // State for the comment input
 
   // Mocked engagement data
   const mockReaderCount = React.useMemo(() => Math.floor(Math.random() * 5000) + 100, [bookId]); // Consistent per bookId load
@@ -60,6 +60,7 @@ export default function BookDetailPage() {
       setBook(null);
       setCurrentStatus(undefined);
       setCurrentRating(0);
+      setComment(''); // Reset comment field when navigating
 
       const foundBook = findBookById(bookId); // Simulate fetch
       if (foundBook) {
@@ -150,6 +151,7 @@ export default function BookDetailPage() {
       });
    };
 
+    // Handle comment submission
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!comment.trim()) return;
@@ -305,7 +307,7 @@ export default function BookDetailPage() {
                  <div className="flex items-start space-x-3">
                     <Avatar className="h-8 w-8 border">
                         <AvatarImage src="https://picsum.photos/seed/user1/40/40" alt="User 1" />
-                        <AvatarFallback>U1</AvatarFallback>
+                        <AvatarFallback>{getInitials('User One')}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">BookLover123</p>
@@ -317,7 +319,7 @@ export default function BookDetailPage() {
                  <div className="flex items-start space-x-3">
                      <Avatar className="h-8 w-8 border">
                         <AvatarImage src="https://picsum.photos/seed/user2/40/40" alt="User 2" />
-                        <AvatarFallback>RD</AvatarFallback>
+                        <AvatarFallback>{getInitials('Reader Dude')}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">ReaderDude</p>
