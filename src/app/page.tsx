@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { Book, ReadingStatus } from "@/interfaces/book"; // Import Book type
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, User, Settings, History, BookMarked, Search, MessageSquare } from "lucide-react"; // Added Search and MessageSquare icons
+import { LogOut, User, Settings, History, BookMarked, Search, MessageSquare, Users } from "lucide-react"; // Added Users icon
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,25 +129,37 @@ export default function Home() {
            </div>
 
 
-          {/* Right Section: Chat, Bookshelf Button, Profile Dropdown or Login Button */}
-          <div className="flex items-center justify-end space-x-2 sm:space-x-4">
+          {/* Right Section: Icons & Profile */}
+          <div className="flex items-center justify-end space-x-1 sm:space-x-2"> {/* Reduced space between icons */}
             {/* Search Icon Button for Mobile */}
             <Button variant="ghost" size="icon" className="sm:hidden">
                 <Search className="h-5 w-5" />
                 <span className="sr-only">Search</span>
             </Button>
 
-            {/* Chat Button */}
+            {/* Readers Club Button */}
             <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
-                <Link href="/chat" aria-label="Chat">
-                    <MessageSquare className="h-5 w-5" />
+                <Link href="/readers-club" aria-label="Readers Club">
+                    <Users className="h-5 w-5" />
                 </Link>
             </Button>
              <Button asChild variant="ghost" size="icon" className="sm:hidden">
-                <Link href="/chat" aria-label="Chat">
-                    <MessageSquare className="h-5 w-5" />
+                <Link href="/readers-club" aria-label="Readers Club">
+                    <Users className="h-5 w-5" />
                 </Link>
             </Button>
+
+             {/* Chat Button */}
+             <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
+                 <Link href="/chat" aria-label="Chat">
+                     <MessageSquare className="h-5 w-5" />
+                 </Link>
+             </Button>
+              <Button asChild variant="ghost" size="icon" className="sm:hidden">
+                 <Link href="/chat" aria-label="Chat">
+                     <MessageSquare className="h-5 w-5" />
+                 </Link>
+             </Button>
 
             {/* Bookshelf Button */}
              <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
