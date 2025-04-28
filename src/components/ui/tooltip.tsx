@@ -16,7 +16,8 @@ const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
 >(({ className, sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitive.Portal> {/* Use Portal to ensure proper positioning */}
+  // Portal is used here, inside TooltipContent, not wrapping Tooltip itself
+  <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
         ref={ref}
         sideOffset={sideOffset}
@@ -31,4 +32,3 @@ const TooltipContent = React.forwardRef<
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } // Ensure TooltipProvider is exported
-

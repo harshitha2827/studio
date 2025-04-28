@@ -194,8 +194,9 @@ export default function ReadersClubPage() {
 
                 {/* Challenges Icon Button with Tooltip */}
                <Tooltip>
+                  {/* Ensure TooltipTrigger wraps a SINGLE direct child */}
                   <TooltipTrigger asChild>
-                     {/* Make Link the direct child and apply button styles */}
+                     {/* Apply button styles directly to the Link component */}
                      <Link
                        href="#challenges-section"
                        onClick={scrollToChallenges}
