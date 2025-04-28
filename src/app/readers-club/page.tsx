@@ -5,7 +5,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BookOpen, CalendarDays, MessageSquare, Target, Trophy, Users, UserCheck } from 'lucide-react'; // Added Users, UserCheck
+import { ArrowLeft, BookOpen, CalendarDays, MessageSquare, Target, Trophy, Users, UserCheck, Star } from 'lucide-react'; // Added Star icon
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SimpleBookCard } from '@/components/simple-book-card'; // For displaying books
 import { generateSampleBooks } from '@/lib/mock-data'; // For mock data
@@ -14,6 +14,13 @@ import { Textarea } from '@/components/ui/textarea'; // For discussion input
 import type { Book } from '@/interfaces/book';
 import { Progress } from '@/components/ui/progress'; // Import Progress component
 import { format } from 'date-fns'; // Import date-fns format function
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
+
 
 // --- Enhanced Mock Data (Could be moved to a separate file later) ---
 
@@ -119,6 +126,9 @@ const mockDiscussionPosts = [
     { id: 'p3', userId: 'user3', userName: 'Charlie', text: "Thinking about joining the 5-book challenge!", timestamp: new Date(Date.now() - 3600 * 1000 * 8), avatarUrl: 'https://i.pravatar.cc/40?u=charlie'},
 ];
 
+// Mock reward balance
+const mockRewardBalance = 175;
+
 export default function ReadersClubPage() {
     const [discussionPost, setDiscussionPost] = React.useState('');
     const [isClient, setIsClient] = React.useState(false); // State to track client mount
@@ -147,174 +157,201 @@ export default function ReadersClubPage() {
 
 
   return (
-    <div className="flex min-h-screen flex-col bg-secondary/30">
-      {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
-        <div className="container flex h-16 items-center justify-between">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-            </Link>
-          </Button>
-          <h1 className="text-xl font-semibold">Readers Club</h1>
-           {/* Header Actions: Challenges Icon Button */}
-           <div className="flex items-center gap-2">
-             <Button
-                variant="ghost"
-                size="icon"
-                onClick={scrollToChallenges}
-                title="View Challenges"
-                aria-label="View reading challenges and marathons"
-                asChild // Use asChild to allow Link behavior
-                >
-                <Link href="#challenges-section"> {/* Link to the anchor ID */}
-                    <Trophy className="h-5 w-5 text-primary" />
-                </Link>
-             </Button>
-             {/* Other icons could go here */}
-           </div>
-        </div>
-      </header>
+    <TooltipProvider> {/* Wrap the page with TooltipProvider */}
+      <div className="flex min-h-screen flex-col bg-secondary/30">
+        {/* Header */}
+        <header className="sticky top-0 z-40 w-full border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
+          <div className="container flex h-16 items-center justify-between">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Link>
+            </Button>
+            <h1 className="text-xl font-semibold">Readers Club</h1>
+             {/* Header Actions: Challenges & Reward Icons */}
+             <div className="flex items-center gap-1"> {/* Reduced gap slightly */}
+                {/* Reward Balance Button with Tooltip */}
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         aria-label={`Reward Balance: ${mockRewardBalance} points`}
+                         className="text-yellow-500 hover:text-yellow-600"
+                         // onClick={() => console.log("Navigate to rewards page?")} // Optional: Add click handler later
+                       >
+                         <Star className="h-5 w-5" />
+                       </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Reward Balance: {mockRewardBalance} points</p>
+                    </TooltipContent>
+                 </Tooltip>
 
-      {/* Main Content */}
-      <main className="container mx-auto flex-1 space-y-8 px-4 py-8">
+                {/* Challenges Icon Button */}
+               <Tooltip>
+                  <TooltipTrigger asChild>
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       onClick={scrollToChallenges}
+                       aria-label="View reading challenges and marathons"
+                       asChild // Use asChild to allow Link behavior
+                       >
+                       <Link href="#challenges-section"> {/* Link to the anchor ID */}
+                           <Trophy className="h-5 w-5 text-primary" />
+                       </Link>
+                     </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                     <p>View Challenges</p>
+                  </TooltipContent>
+               </Tooltip>
 
-        {/* Currently Reading Section */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> What We're Reading</CardTitle>
-            <CardDescription>See the books members are currently diving into.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             {mockCurrentlyReading.length > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                    {mockCurrentlyReading.map(book => (
-                        <SimpleBookCard key={book.id} book={book} className="w-full"/>
-                    ))}
-                </div>
-            ) : (
-                <p className="text-muted-foreground text-sm">No books currently being read by the club.</p>
-            )}
-          </CardContent>
-        </Card>
+               {/* Other icons could go here */}
+             </div>
+          </div>
+        </header>
 
-        {/* Discussion Forum Section */}
-        <Card className="shadow-lg">
+        {/* Main Content */}
+        <main className="container mx-auto flex-1 space-y-8 px-4 py-8">
+
+          {/* Currently Reading Section */}
+          <Card className="shadow-lg">
             <CardHeader>
-                <CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary" /> Club Discussion</CardTitle>
-                <CardDescription>Chat about books, challenges, and more.</CardDescription>
+              <CardTitle className="flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> What We're Reading</CardTitle>
+              <CardDescription>See the books members are currently diving into.</CardDescription>
+            </CardHeader>
+            <CardContent>
+               {mockCurrentlyReading.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                      {mockCurrentlyReading.map(book => (
+                          <SimpleBookCard key={book.id} book={book} className="w-full"/>
+                      ))}
+                  </div>
+              ) : (
+                  <p className="text-muted-foreground text-sm">No books currently being read by the club.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Discussion Forum Section */}
+          <Card className="shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary" /> Club Discussion</CardTitle>
+                  <CardDescription>Chat about books, challenges, and more.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  {/* Post Input */}
+                  <form onSubmit={handlePostSubmit} className="flex items-start gap-3">
+                      <Avatar className="h-9 w-9 border mt-1">
+                           {/* TODO: Use actual logged-in user avatar */}
+                          <AvatarImage src={mockUsers[0].avatarUrl} alt={mockUsers[0].name} />
+                          <AvatarFallback>{getInitials(mockUsers[0].name)}</AvatarFallback>
+                      </Avatar>
+                      <Textarea
+                          placeholder="Start a discussion..."
+                          value={discussionPost}
+                          onChange={(e) => setDiscussionPost(e.target.value)}
+                          rows={2}
+                          className="flex-1 resize-none"
+                       />
+                      <Button type="submit" size="sm" disabled={!discussionPost.trim()} className="mt-1">Post</Button>
+                  </form>
+
+                  <hr className="my-4 border-border" />
+
+                  {/* Existing Posts */}
+                  <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                      {mockDiscussionPosts.map(post => (
+                          <div key={post.id} className="flex items-start gap-3">
+                               <Avatar className="h-8 w-8 border">
+                                  <AvatarImage src={post.avatarUrl} alt={post.userName} />
+                                  <AvatarFallback>{getInitials(post.userName)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 rounded-md border bg-muted/30 p-3">
+                                  <p className="text-sm font-medium text-foreground">{post.userName}</p>
+                                  <p className="mt-1 text-sm text-foreground/90">{post.text}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground/70">
+                                      {/* Format date/time consistently only on the client */}
+                                      {isClient ? `${format(post.timestamp, 'p')} - ${format(post.timestamp, 'P')}` : 'Loading date...'}
+                                  </p>
+                              </div>
+                          </div>
+                      ))}
+                       {mockDiscussionPosts.length === 0 && (
+                           <p className="text-muted-foreground text-sm text-center py-4">No discussion posts yet.</p>
+                      )}
+                  </div>
+              </CardContent>
+          </Card>
+
+          {/* Challenges & Marathons Section - Added ID here */}
+          <Card id="challenges-section" className="shadow-lg scroll-mt-20"> {/* Added scroll-mt for header offset */}
+            <CardHeader>
+              <CardTitle className="flex items-center"><Trophy className="mr-2 h-5 w-5 text-primary" /> Challenges & Marathons</CardTitle>
+              <CardDescription>Track group goals and participate in reading events.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                {/* Post Input */}
-                <form onSubmit={handlePostSubmit} className="flex items-start gap-3">
-                    <Avatar className="h-9 w-9 border mt-1">
-                         {/* TODO: Use actual logged-in user avatar */}
-                        <AvatarImage src={mockUsers[0].avatarUrl} alt={mockUsers[0].name} />
-                        <AvatarFallback>{getInitials(mockUsers[0].name)}</AvatarFallback>
-                    </Avatar>
-                    <Textarea
-                        placeholder="Start a discussion..."
-                        value={discussionPost}
-                        onChange={(e) => setDiscussionPost(e.target.value)}
-                        rows={2}
-                        className="flex-1 resize-none"
-                     />
-                    <Button type="submit" size="sm" disabled={!discussionPost.trim()} className="mt-1">Post</Button>
-                </form>
-
-                <hr className="my-4 border-border" />
-
-                {/* Existing Posts */}
-                <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-                    {mockDiscussionPosts.map(post => (
-                        <div key={post.id} className="flex items-start gap-3">
-                             <Avatar className="h-8 w-8 border">
-                                <AvatarImage src={post.avatarUrl} alt={post.userName} />
-                                <AvatarFallback>{getInitials(post.userName)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 rounded-md border bg-muted/30 p-3">
-                                <p className="text-sm font-medium text-foreground">{post.userName}</p>
-                                <p className="mt-1 text-sm text-foreground/90">{post.text}</p>
-                                <p className="mt-1 text-xs text-muted-foreground/70">
-                                    {/* Format date/time consistently only on the client */}
-                                    {isClient ? `${format(post.timestamp, 'p')} - ${format(post.timestamp, 'P')}` : 'Loading date...'}
-                                </p>
-                            </div>
-                        </div>
-                    ))}
-                     {mockDiscussionPosts.length === 0 && (
-                         <p className="text-muted-foreground text-sm text-center py-4">No discussion posts yet.</p>
-                    )}
-                </div>
+              {mockChallenges.length > 0 ? (
+                  mockChallenges.map(challenge => (
+                      <div key={challenge.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 border rounded-md bg-muted/40">
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                              <div className="text-primary flex-shrink-0">
+                                  {challenge.icon}
+                              </div>
+                              <div className="flex-1">
+                                  <p className="font-medium text-foreground">{challenge.title}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{challenge.progress}% complete</p>
+                              </div>
+                          </div>
+                          <div className="w-full sm:flex-1">
+                               <Progress value={challenge.progress} aria-label={`${challenge.title} progress`} className="h-2"/>
+                          </div>
+                          {/* Link to the challenge detail page */}
+                          <Button variant="outline" size="sm" asChild className="w-full mt-2 sm:w-auto sm:mt-0 sm:ml-auto">
+                             <Link href={`/challenge/${challenge.id}`}>
+                                 View Details
+                             </Link>
+                          </Button>
+                      </div>
+                  ))
+              ) : (
+                  <p className="text-muted-foreground text-sm">No active challenges or marathons.</p>
+              )}
             </CardContent>
-        </Card>
+             <CardFooter>
+                  <Button variant="secondary">
+                      <CalendarDays className="mr-2 h-4 w-4" /> Create New Challenge/Event
+                  </Button>
+              </CardFooter>
+          </Card>
 
-        {/* Challenges & Marathons Section - Added ID here */}
-        <Card id="challenges-section" className="shadow-lg scroll-mt-20"> {/* Added scroll-mt for header offset */}
-          <CardHeader>
-            <CardTitle className="flex items-center"><Trophy className="mr-2 h-5 w-5 text-primary" /> Challenges & Marathons</CardTitle>
-            <CardDescription>Track group goals and participate in reading events.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {mockChallenges.length > 0 ? (
-                mockChallenges.map(challenge => (
-                    <div key={challenge.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 border rounded-md bg-muted/40">
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                            <div className="text-primary flex-shrink-0">
-                                {challenge.icon}
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium text-foreground">{challenge.title}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">{challenge.progress}% complete</p>
-                            </div>
-                        </div>
-                        <div className="w-full sm:flex-1">
-                             <Progress value={challenge.progress} aria-label={`${challenge.title} progress`} className="h-2"/>
-                        </div>
-                        {/* Link to the challenge detail page */}
-                        <Button variant="outline" size="sm" asChild className="w-full mt-2 sm:w-auto sm:mt-0 sm:ml-auto">
-                           <Link href={`/challenge/${challenge.id}`}>
-                               View Details
-                           </Link>
-                        </Button>
-                    </div>
-                ))
-            ) : (
-                <p className="text-muted-foreground text-sm">No active challenges or marathons.</p>
-            )}
-          </CardContent>
-           <CardFooter>
-                <Button variant="secondary">
-                    <CalendarDays className="mr-2 h-4 w-4" /> Create New Challenge/Event
-                </Button>
-            </CardFooter>
-        </Card>
+          {/* Members Section */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Club Members ({mockUsers.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-4">
+              {mockUsers.map(member => (
+                <div key={member.id} className="flex flex-col items-center gap-1 text-center w-16">
+                  <Avatar className="h-10 w-10 border">
+                    <AvatarImage src={member.avatarUrl} alt={member.name} />
+                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs text-muted-foreground truncate w-full">{member.name}</span>
+                </div>
+              ))}
+            </CardContent>
+             <CardFooter>
+                  <Button variant="outline" size="sm">Invite Members</Button>
+              </CardFooter>
+          </Card>
 
-        {/* Members Section */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Club Members ({mockUsers.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            {mockUsers.map(member => (
-              <div key={member.id} className="flex flex-col items-center gap-1 text-center w-16">
-                <Avatar className="h-10 w-10 border">
-                  <AvatarImage src={member.avatarUrl} alt={member.name} />
-                  <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                </Avatar>
-                <span className="text-xs text-muted-foreground truncate w-full">{member.name}</span>
-              </div>
-            ))}
-          </CardContent>
-           <CardFooter>
-                <Button variant="outline" size="sm">Invite Members</Button>
-            </CardFooter>
-        </Card>
-
-      </main>
-    </div>
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }
 
 
-    
